@@ -38,7 +38,9 @@ private:
         AddBlinkParameter(pM.GetMorphWeightReference(NukudeFace::Blink));
     }
 
-    void Default(){}
+    void Default(){
+        AddMaterialFrame(Color::CGREEN);
+    }
 
     void Angry(){
         AddParameterFrame(NukudeFace::Anger, 1.0f);
