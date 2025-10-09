@@ -7,12 +7,21 @@
 #include "../../Camera/CameraManager/Implementations/HUB75DeltaCameras.h"
 #include "../../Controller/HUB75Controller.h"
 
+// E 001 TARS: Add in a plane to the corner of the display to illuminate side panel ---
+// ASTRALTODO: Update and use a flat circle for this!
+#include "../../Assets/Models/OBJ/SolidCube.h"
+// E 001 TARS -------------------------------------------------------------------------
+
 class ProtogenHUB75Project : public ProtogenProject {
 private:
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
     NukudeFace pM;
     DeltaDisplayBackground deltaDisplayBackground;
+
+    // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
+    SolidCube sideIllum;
+    // E 001 TARS ----------------------------------------------------------------------
     
 	const __FlashStringHelper* faceArray[10] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3")};
 
@@ -91,6 +100,14 @@ public:
     ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 94.0f), 22, 23, 9){
         scene.AddObject(pM.GetObject());
         scene.AddObject(deltaDisplayBackground.GetObject());
+
+        // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
+        const float sideIllum_Scale = 0.65;
+        sideIllum.GetObject()->GetTransform()->SetPosition(Vector3D(192, 0, 0));
+        sideIllum.GetObject()->GetTransform()->SetScale(Vector3D(sideIllum_Scale, sideIllum_Scale, sideIllum_Scale));
+        sideIllum.GetObject()->UpdateTransform();
+        // scene.AddObject(sideIllum.GetObject());
+        // E 001 TARS ----------------------------------------------------------------------
 
         pM.GetObject()->SetMaterial(GetFaceMaterial());
         deltaDisplayBackground.GetObject()->SetMaterial(GetFaceMaterial());
