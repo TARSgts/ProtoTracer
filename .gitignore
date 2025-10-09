@@ -10,3 +10,4 @@ lib/ProtoTracer/Assets/Models/FBX/Commissions/*
 .piolibdeps/
 .clang_complete
 .gcc-flags.json
+.vscode/extensions.json
