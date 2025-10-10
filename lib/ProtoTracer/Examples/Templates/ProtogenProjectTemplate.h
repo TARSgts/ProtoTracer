@@ -94,7 +94,7 @@ private:
     /**
      * @brief Pin assignments and face count.
      */
-    uint8_t microphonePin = 0; ///< Pin for the microphone input.
+    uint8_t microphonePin = A0; ///< Pin for the microphone input.
     uint8_t buttonPin    = 0; ///< Pin for the button input.
     uint8_t faceCount    = 10; ///< Total number of faces available (e.g., for UI or animations).
 

@@ -28,7 +28,7 @@
  */
 class MicrophoneFourierBase {
 protected:
-    static const uint16_t FFTSize = 256; ///< Size of the FFT (number of samples).
+    static const uint16_t FFTSize = 1024; ///< Size of the FFT (number of samples).
     static const uint16_t OutputBins = 128; ///< Number of output bins from FFT processing.
     static uint16_t sampleRate; ///< Sampling rate in Hz.
     static uint8_t pin; ///< Pin number for microphone input.

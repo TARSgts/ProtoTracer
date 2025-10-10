@@ -563,7 +563,7 @@ void ProtogenProject::Initialize() {
 
     fanController.Initialize();
 
-    MicrophoneFourier::Initialize(microphonePin, 8000, 50.0f, 120.0f);//8KHz sample rate, 50dB min, 120dB max
+    MicrophoneFourier::Initialize(microphonePin, 8000, 20.0f, 90.0f);//8KHz sample rate, 50dB min, 120dB max
     
     #ifdef NEOTRELLISMENU
     Menu::Initialize(faceCount);//NeoTrellis
