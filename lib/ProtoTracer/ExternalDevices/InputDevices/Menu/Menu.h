@@ -196,8 +196,8 @@ public:
     /**
      * @brief Initializes the Menu using a face count, input pin, holding time, and size.
      *
-     * This overload is typically used in single-button mode (not NeoTrellis):
-     * it sets up the DampedSpring, the text engine, and hardware input for user navigation.
+     * This overload is maintained for backward compatibility; it internally wires the same
+     * pin to both the short- and long-press handlers.
      *
      * @param faceCount The maximum number of faces selectable.
      * @param pin The GPIO pin for the button input.
@@ -206,6 +206,18 @@ public:
      */
     static void Initialize(uint8_t faceCount, uint8_t pin, uint16_t holdingTime,
                            Vector2D size = Vector2D(240, 50));
+
+    /**
+     * @brief Initializes the Menu with separate short- and long-press pins.
+     *
+     * @param faceCount The maximum number of faces selectable.
+     * @param shortPressPin GPIO pin used for short presses (face cycle/value increment).
+     * @param longPressPin GPIO pin used for long presses (menu advance).
+     * @param holdingTime Legacy press duration value retained for compatibility.
+     * @param size The size (width, height) for the menu in screen coordinates.
+     */
+    static void Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPressPin,
+                           uint16_t holdingTime, Vector2D size = Vector2D(240, 50));
 
     /**
      * @brief Initializes the Menu using just a face count and size.

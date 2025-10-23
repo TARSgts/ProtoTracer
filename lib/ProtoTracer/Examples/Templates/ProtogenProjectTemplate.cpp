@@ -95,6 +95,22 @@ void ProtogenProject::UpdateFace(float ratio) {
     
     if (Menu::UseBoopSensor()) {
         isBooped = boop.isBooped();
+
+        static bool lastTTPState = false;
+        const bool ttpActive = digitalRead(16) == HIGH;
+
+        if (ttpActive != lastTTPState) {
+            lastTTPState = ttpActive;
+
+            if (Serial) {
+                Serial.print(F("TTP223: "));
+                Serial.println(ttpActive ? F("TOUCHED") : F("released"));
+            }
+        }
+
+        if (ttpActive) {
+            isBooped = true;
+        }
     }
 
     hud.SetEffect(Menu::GetEffect());// Pull Effect from menu and store reference in hud for observing data
@@ -320,9 +336,10 @@ void ProtogenProject::AddParameter(uint8_t index, float* parameter, uint16_t tra
 }
 
 void ProtogenProject::AddViseme(Viseme::MouthShape visemeName, float* parameter){
-    eEA.AddParameter(parameter, visemeName + 100, 2, 0.0f, 1.0f);
+    constexpr uint16_t visemeTransitionFrames = 6;
+    eEA.AddParameter(parameter, visemeName + 100, visemeTransitionFrames, 0.0f, 1.0f);
 
-    eEA.SetInterpolationMethod(visemeName + 100, IEasyEaseAnimator::Linear);
+    eEA.SetInterpolationMethod(visemeName + 100, IEasyEaseAnimator::Cosine);
 }
 
 void ProtogenProject::AddBlinkParameter(float* blinkParameter){
@@ -514,12 +531,13 @@ Material* ProtogenProject::GetBackgroundMaterial(){
     return &backgroundMaterial;
 }
 
-ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller, uint8_t numObjects, Vector2D camMin, Vector2D camMax, uint8_t microphonePin, uint8_t buttonPin, uint8_t faceCount) : Project(cameras, controller, numObjects + 1) {
+ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller, uint8_t numObjects, Vector2D camMin, Vector2D camMax, uint8_t microphonePin, uint8_t buttonPin, uint8_t faceCount, uint8_t faceCycleButtonPin) : Project(cameras, controller, numObjects + 1) {
     this->camMin = camMin;
     this->camMax = camMax;
     this->microphonePin = microphonePin;
     this->buttonPin = buttonPin;
     this->faceCount = faceCount;
+    this->faceCycleButtonPin = (faceCycleButtonPin == 255 ? buttonPin : faceCycleButtonPin);
 
     this->scene.AddObject(background.GetObject());
     
@@ -559,15 +577,20 @@ void ProtogenProject::Initialize() {
 
     boop.Initialize(5);
 
+    pinMode(16, INPUT);
+
     hud.Initialize();
 
     fanController.Initialize();
 
     MicrophoneFourier::Initialize(microphonePin, 8000, 20.0f, 90.0f);//8KHz sample rate, 50dB min, 120dB max
     
-    #ifdef NEOTRELLISMENU
+#ifdef NEOTRELLISMENU
     Menu::Initialize(faceCount);//NeoTrellis
-    #else
-    Menu::Initialize(faceCount, buttonPin, 500);//7 is number of faces
-    #endif
+#else
+    Menu::Initialize(faceCount, faceCycleButtonPin, buttonPin, 500);//7 is number of faces
+#endif
+
+    Menu::SetFaceState(0);
+    Menu::SetCurrentMenu(0);
 }

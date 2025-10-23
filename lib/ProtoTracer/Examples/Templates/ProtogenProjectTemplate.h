@@ -95,7 +95,8 @@ private:
      * @brief Pin assignments and face count.
      */
     uint8_t microphonePin = A0; ///< Pin for the microphone input.
-    uint8_t buttonPin    = 0; ///< Pin for the button input.
+    uint8_t buttonPin    = 0; ///< Pin for the menu/long-press button.
+    uint8_t faceCycleButtonPin = 255; ///< Optional secondary button used to cycle faces.
     uint8_t faceCount    = 10; ///< Total number of faces available (e.g., for UI or animations).
 
     // --- Materials ---
@@ -605,12 +606,13 @@ public:
      * @param camMin The minimum 2D bounds for the main camera.
      * @param camMax The maximum 2D bounds for the main camera.
      * @param microphonePin The pin used for the microphone.
-     * @param buttonPin The pin used for the button.
+     * @param buttonPin The pin used for the menu/long-press button.
      * @param faceCount The number of faces for possible UI or animations.
+     * @param faceCycleButtonPin Optional secondary button used for face cycling / short presses.
      */
     ProtogenProject(CameraManager* cameras, Controller* controller, uint8_t numObjects, 
                     Vector2D camMin, Vector2D camMax, uint8_t microphonePin, 
-                    uint8_t buttonPin, uint8_t faceCount);
+                    uint8_t buttonPin, uint8_t faceCount, uint8_t faceCycleButtonPin = 255);
 
     /**
      * @brief Initializes the ProtogenProject, setting up sensors, menus, and hardware.

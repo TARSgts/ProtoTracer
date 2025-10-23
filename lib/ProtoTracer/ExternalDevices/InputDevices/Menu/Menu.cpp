@@ -100,6 +100,10 @@ void Menu::SetDefaultEntries() {
 }
 
 void Menu::Initialize(uint8_t faceCount, uint8_t pin, uint16_t holdingTime, Vector2D size) {
+    Initialize(faceCount, pin, pin, holdingTime, size);
+}
+
+void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPressPin, uint16_t holdingTime, Vector2D size) {
     Menu::faceCount = faceCount;
 
     dampedSpringX.SetConstants(1.0f, 0.5f);
@@ -112,7 +116,7 @@ void Menu::Initialize(uint8_t faceCount, uint8_t pin, uint16_t holdingTime, Vect
     textEngine.SetBlinkTime(200);
 
 #ifndef NEOTRELLISMENU
-    if (!MenuHandler<menuCount>::Initialize(pin, holdingTime)) {
+    if (!MenuHandler<menuCount>::Initialize(shortPressPin, longPressPin, holdingTime)) {
         SetDefaultEntries();
     }
 #endif

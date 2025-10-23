@@ -22,25 +22,81 @@ template <uint8_t menuCount>
 uint8_t MenuHandler<menuCount>::pin;
 
 template <uint8_t menuCount>
+uint8_t MenuHandler<menuCount>::longPin;
+
+template <uint8_t menuCount>
 bool MenuHandler<menuCount>::holdingState;
 
 template <uint8_t menuCount>
 bool MenuHandler<menuCount>::previousState;
 
 template <uint8_t menuCount>
+bool MenuHandler<menuCount>::previousLongState;
+
+template <uint8_t menuCount>
+unsigned long MenuHandler<menuCount>::lastInteraction;
+
+template <uint8_t menuCount>
 void MenuHandler<menuCount>::UpdateState() {
-    long currentTime = millis();
+    const unsigned long currentTime = millis();
+    constexpr unsigned long inactivityTimeout = 30000UL;
+
+    if (longPin != pin) {
+        const bool shortPressed = !digitalRead(pin);
+        const bool longPressed = !digitalRead(longPin);
+
+        if (!shortPressed && !longPressed && currentMenu != 0 &&
+            (currentTime - lastInteraction) >= inactivityTimeout) {
+            WriteEEPROM(currentMenu, currentValue[currentMenu]);
+            currentMenu = 0;
+            lastInteraction = currentTime;
+        }
+
+        if (shortPressed && !previousState) {
+            lastInteraction = currentTime;
+        } else if (!shortPressed && previousState) {
+            if (maxValue[currentMenu] > 0) {
+                currentValue[currentMenu] = (currentValue[currentMenu] + 1) % maxValue[currentMenu];
+                if (currentMenu != 0) {
+                    WriteEEPROM(currentMenu, currentValue[currentMenu]);
+                }
+            }
+            lastInteraction = currentTime;
+        }
+
+        if (longPressed && !previousLongState) {
+            lastInteraction = currentTime;
+        } else if (!longPressed && previousLongState) {
+            WriteEEPROM(currentMenu, currentValue[currentMenu]);
+            currentMenu += 1;
+            if (currentMenu >= menuCount) currentMenu = 0;
+            lastInteraction = currentTime;
+        }
+
+        previousState = shortPressed;
+        previousLongState = longPressed;
+        return;
+    }
+
     bool pinState = digitalRead(pin);
     long timeOn = 0;
 
-    if (pinState && !previousState) {  // Pin not pressed, not triggered -> reset time
+    if (pinState && currentMenu != 0 &&
+        (currentTime - lastInteraction) >= inactivityTimeout) {
+        WriteEEPROM(currentMenu, currentValue[currentMenu]);
+        currentMenu = 0;
+        lastInteraction = currentTime;
+    }
+
+    if (pinState && !previousState) {
         previousMillisHold = currentTime;
-    } else if (pinState && previousState) {  // Pin not pressed, was triggered -> measure time
+    } else if (pinState && previousState) {
         timeOn = currentTime - previousMillisHold;
 
         previousState = false;
-    } else if (!pinState) {  // Pin is pressed,
+    } else if (!pinState) {
         previousState = true;
+        lastInteraction = currentTime;
     }
 
     if (timeOn > holdingTime && pinState) {
@@ -50,11 +106,13 @@ void MenuHandler<menuCount>::UpdateState() {
 
         currentMenu += 1;
         if (currentMenu >= menuCount) currentMenu = 0;
+        lastInteraction = currentTime;
     } else if (timeOn > 50 && pinState) {
         previousMillisHold = currentTime;
 
         currentValue[currentMenu] += 1;
         if (currentValue[currentMenu] >= maxValue[currentMenu]) currentValue[currentMenu] = 0;
+        lastInteraction = currentTime;
     }
 }
 
@@ -70,23 +128,32 @@ void MenuHandler<menuCount>::WriteEEPROM(uint16_t index, uint8_t value) {
 
 template <uint8_t menuCount>
 void MenuHandler<menuCount>::Begin() {
+    lastInteraction = millis();
+    previousLongState = false;
     menuChangeTimer.begin(UpdateState, 1000);
 }
 
 template <uint8_t menuCount>
-bool MenuHandler<menuCount>::Initialize(uint8_t pin, uint16_t holdingTime) {
+bool MenuHandler<menuCount>::Initialize(uint8_t shortPressPin, uint8_t longPressPin, uint16_t holdingTime) {
     MenuHandler::holdingState = true;
 
     MenuHandler::previousState = false;
+    MenuHandler::previousLongState = false;
 
-    pinMode(pin, INPUT_PULLUP);
+    pinMode(shortPressPin, INPUT_PULLUP);
+    if (longPressPin != shortPressPin) {
+        pinMode(longPressPin, INPUT_PULLUP);
+    }
 
-    MenuHandler::pin = pin;
+    MenuHandler::pin = shortPressPin;
+    MenuHandler::longPin = longPressPin;
     MenuHandler::holdingTime = holdingTime;
 
     for (uint8_t i = 0; i < menuCount; i++) {
         currentValue[i] = ReadEEPROM(i);
     }
+
+    lastInteraction = millis();
 
     return ReadEEPROM(menuCount + 1) != 255;
 }

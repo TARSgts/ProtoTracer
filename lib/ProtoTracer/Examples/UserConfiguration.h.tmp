@@ -56,7 +56,7 @@
  *
  * Note: This feature cannot be used simultaneously with NEOTRELLISMENU.
  */
-//#define MORSEBUTTON
+#define MORSEBUTTON
 #if DOXYGEN
 #define MORSEBUTTON
 #endif

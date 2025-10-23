@@ -35,9 +35,12 @@ private:
     static uint8_t currentMenu; ///< Index of the currently active menu.
     static uint8_t currentValue[menuCount]; ///< Array of current values for each menu.
     static uint8_t maxValue[menuCount]; ///< Array of maximum values for each menu.
-    static uint8_t pin; ///< The pin number associated with the button.
+    static uint8_t pin; ///< The pin number associated with the short-press button.
+    static uint8_t longPin; ///< The pin number associated with the long-press button.
     static bool holdingState; ///< Indicates whether the button is in a holding state.
-    static bool previousState; ///< Tracks the previous state of the button.
+    static bool previousState; ///< Tracks the previous state of the short-press button.
+    static bool previousLongState; ///< Tracks the previous state of the long-press button.
+    static unsigned long lastInteraction; ///< Timestamp of the most recent button activity (milliseconds).
 
     /**
      * @brief Updates the button state and menu navigation.
@@ -69,11 +72,12 @@ public:
     /**
      * @brief Initializes the MenuHandler with specified parameters.
      *
-     * @param pin The pin number associated with the button.
-     * @param holdingTime The time threshold for detecting holding behavior in milliseconds.
+     * @param shortPressPin The pin number associated with the short-press button.
+     * @param longPressPin The pin number associated with the long-press button (may equal shortPressPin).
+     * @param holdingTime The time threshold for detecting holding behavior in milliseconds (legacy behaviour).
      * @return True if initialization was successful, false otherwise.
      */
-    static bool Initialize(uint8_t pin, uint16_t holdingTime);
+    static bool Initialize(uint8_t shortPressPin, uint8_t longPressPin, uint16_t holdingTime);
 
     /**
      * @brief Sets a default value for a specific menu.
