@@ -83,6 +83,81 @@ void ProtogenProject::SetMaterialColor(){
     }
 }
 
+#ifdef ENABLE_FACE_COLOR_STRIP
+RGBColor ProtogenProject::GetSolidFaceColor(Color faceColor) const {
+    switch(faceColor) {
+        case CYELLOW: return RGBColor(255, 255, 0);
+        case CORANGE: return RGBColor(255, 165, 0);
+        case CWHITE:  return RGBColor(255, 255, 255);
+        case CGREEN:  return RGBColor(0, 255, 0);
+        case CPURPLE: return RGBColor(255, 0, 255);
+        case CRED:    return RGBColor(255, 0, 0);
+        case CBLUE:   return RGBColor(0, 0, 255);
+        case CBLACK:  return RGBColor(0, 0, 0);
+        default:      return RGBColor(0, 0, 0);
+    }
+}
+
+void ProtogenProject::ApplyFaceStripColor(Color color, float ratio, const RGBColor& hueFront, const RGBColor& hueBack) {
+    switch(color) {
+        case CBASE:
+            faceColorStrip.SetGradient(hueFront, hueBack);
+            break;
+        case CYELLOW:
+        case CORANGE:
+        case CWHITE:
+        case CGREEN:
+        case CPURPLE:
+        case CRED:
+        case CBLUE:
+        case CBLACK:
+            faceColorStrip.SetSolidColor(GetSolidFaceColor(color));
+            break;
+        case CRAINBOW:
+            faceColorStrip.ShowRainbow(ratio, 1.0f);
+            break;
+        case CRAINBOWNOISE:
+            faceColorStrip.ShowRainbow(ratio, 0.35f);
+            break;
+        case CHORIZONTALRAINBOW:
+            faceColorStrip.ShowRainbow(ratio, 1.5f);
+            break;
+        default:
+            faceColorStrip.SetGradient(hueFront, hueBack);
+            break;
+    }
+}
+
+ProtogenProject::Color ProtogenProject::ConvertMenuColor(uint8_t menuColor) const {
+    if (menuColor > CBLACK) return CBASE;
+    return static_cast<Color>(menuColor);
+}
+
+void ProtogenProject::UpdateFaceColorStrip(float ratio, const RGBColor& hueFront, const RGBColor& hueBack) {
+    bool shouldApply = false;
+    Color colorSelection = lastAppliedStripColor;
+
+    if (stripColorOverridePending) {
+        colorSelection = pendingStripColor;
+        stripColorOverridePending = false;
+        shouldApply = true;
+    } else {
+        uint8_t menuColor = Menu::GetFaceColor();
+        if (!stripColorInitialized || menuColor != lastMenuFaceColor) {
+            colorSelection = ConvertMenuColor(menuColor);
+            lastMenuFaceColor = menuColor;
+            shouldApply = true;
+        }
+    }
+
+    if (shouldApply) {
+        ApplyFaceStripColor(colorSelection, ratio, hueFront, hueBack);
+        lastAppliedStripColor = colorSelection;
+        stripColorInitialized = true;
+    }
+}
+#endif
+
 void ProtogenProject::UpdateFace(float ratio) {
     while(!frameLimiter.IsReady()) delay(1);
 
@@ -143,6 +218,10 @@ void ProtogenProject::UpdateFace(float ratio) {
 
     flowNoise.SetGradient(hueFront, 0);
     flowNoise.SetGradient(hueBack, 1);
+
+#ifdef ENABLE_FACE_COLOR_STRIP
+    UpdateFaceColorStrip(ratio, hueFront, hueBack);
+#endif
 
     UpdateKeyFrameTracks();
 
@@ -394,6 +473,11 @@ void ProtogenProject::AddMaterialFrame(Color color, float opacity){
         default:
             break;
     }
+
+#ifdef ENABLE_FACE_COLOR_STRIP
+    pendingStripColor = color;
+    stripColorOverridePending = true;
+#endif
 }
 
 void ProtogenProject::AddMaterialFrame(Material& material, float opacity){
@@ -582,6 +666,9 @@ void ProtogenProject::Initialize() {
     hud.Initialize();
 
     fanController.Initialize();
+#ifdef ENABLE_FACE_COLOR_STRIP
+    faceColorStrip.Initialize();
+#endif
 
     MicrophoneFourier::Initialize(microphonePin, 8000, 20.0f, 90.0f);//8KHz sample rate, 50dB min, 120dB max
     

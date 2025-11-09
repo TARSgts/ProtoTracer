@@ -17,6 +17,9 @@
 #include "../../ExternalDevices/Displays/SSD1306.h"
 #include "../../ExternalDevices/Sensors/Microphone/MicrophoneFourier_MAX9814.h"
 #include "../../ExternalDevices/OutputDevices/FanController.h"
+#ifdef ENABLE_FACE_COLOR_STRIP
+#include "../../ExternalDevices/OutputDevices/FaceColorStrip.h"
+#endif
 
 #include "../../Scene/Materials/Utils/MaterialAnimator.h"
 #include "../../Scene/Materials/Static/SimpleMaterial.h"
@@ -52,6 +55,26 @@
  * - HUD handling and UI control via menu
  */
 class ProtogenProject : public Project {
+protected:
+    /**
+     * @enum Color
+     * @brief Enumeration of different color states for the face material.
+     */
+    enum Color {
+        CBASE,              ///< Base or default color.
+        CYELLOW,            ///< Yellow color.
+        CORANGE,            ///< Orange color.
+        CWHITE,             ///< White color.
+        CGREEN,             ///< Green color.
+        CPURPLE,            ///< Purple color.
+        CRED,               ///< Red color.
+        CBLUE,              ///< Blue color.
+        CRAINBOW,           ///< Rainbow spiral.
+        CRAINBOWNOISE,      ///< Flow noise (rainbow noise).
+        CHORIZONTALRAINBOW, ///< Horizontal rainbow effect.
+        CBLACK              ///< Black color.
+    };
+
 private:
     /**
      * @brief Background object and associated 3D model.
@@ -151,6 +174,14 @@ private:
      * @brief Fan controller for controlling a fan's PWM.
      */
     FanController fanController = FanController(15);
+#ifdef ENABLE_FACE_COLOR_STRIP
+    FaceColorStrip faceColorStrip = FaceColorStrip(FACE_COLOR_STRIP_PIN, FACE_COLOR_STRIP_LENGTH, FACE_COLOR_STRIP_BRIGHTNESS);
+    Color pendingStripColor = CBASE;
+    bool stripColorOverridePending = false;
+    Color lastAppliedStripColor = CBASE;
+    uint8_t lastMenuFaceColor = 0;
+    bool stripColorInitialized = false;
+#endif
 
     /**
      * @brief Gesture sensor used for detecting "boops."
@@ -213,25 +244,6 @@ private:
 
 protected:
     /**
-     * @enum Color
-     * @brief Enumeration of different color states for the face material.
-     */
-    enum Color {
-        CBASE,              ///< Base or default color.
-        CYELLOW,            ///< Yellow color.
-        CORANGE,            ///< Orange color.
-        CWHITE,             ///< White color.
-        CGREEN,             ///< Green color.
-        CPURPLE,            ///< Purple color.
-        CRED,               ///< Red color.
-        CBLUE,              ///< Blue color.
-        CRAINBOW,           ///< Rainbow spiral.
-        CRAINBOWNOISE,      ///< Flow noise (rainbow noise).
-        CHORIZONTALRAINBOW, ///< Horizontal rainbow effect.
-        CBLACK              ///< Black color.
-    };
-
-    /**
      * @brief Animator that eases parameter transitions.
      */
     EasyEaseAnimator<60> eEA = EasyEaseAnimator<60>(IEasyEaseAnimator::Overshoot, 1.0f, 0.35f);
@@ -251,6 +263,12 @@ protected:
      * @param ratio A normalized ratio (0.0f to 1.0f) often used in animation phases.
      */
     void UpdateFace(float ratio);
+#ifdef ENABLE_FACE_COLOR_STRIP
+    void UpdateFaceColorStrip(float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
+    void ApplyFaceStripColor(Color color, float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
+    RGBColor GetSolidFaceColor(Color faceColor) const;
+    Color ConvertMenuColor(uint8_t menuColor) const;
+#endif
 
     /**
      * @brief Sets the camera bounds for the main (front) view.

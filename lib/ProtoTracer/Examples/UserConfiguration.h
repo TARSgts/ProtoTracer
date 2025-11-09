@@ -60,3 +60,28 @@
 #if DOXYGEN
 #define MORSEBUTTON
 #endif
+
+/**
+ * @def ENABLE_FACE_COLOR_STRIP
+ * @brief Mirrors the current face color onto an external WS2812 strip.
+ */
+#define ENABLE_FACE_COLOR_STRIP
+#if DOXYGEN
+#define ENABLE_FACE_COLOR_STRIP
+#endif
+
+#ifndef FACE_COLOR_STRIP_PIN
+#define FACE_COLOR_STRIP_PIN 20
+#endif
+
+#ifndef FACE_COLOR_STRIP_LENGTH
+#define FACE_COLOR_STRIP_LENGTH 30
+#endif
+
+#ifndef FACE_COLOR_STRIP_MAX_LENGTH
+#define FACE_COLOR_STRIP_MAX_LENGTH FACE_COLOR_STRIP_LENGTH
+#endif
+
+#ifndef FACE_COLOR_STRIP_BRIGHTNESS
+#define FACE_COLOR_STRIP_BRIGHTNESS 128
+#endif
