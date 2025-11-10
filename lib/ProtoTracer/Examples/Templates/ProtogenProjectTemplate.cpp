@@ -51,9 +51,59 @@ void ProtogenProject::UpdateKeyFrameTracks(){
 
 void ProtogenProject::UpdateFFTVisemes(){
     if(Menu::UseMicrophone()){
-        eEA.AddParameterFrame(Viseme::SS + 100, MicrophoneFourier::GetCurrentMagnitude() / 2.0f);
+        float* fftData = MicrophoneFourier::GetFourierFiltered();
 
-        if(MicrophoneFourier::GetCurrentMagnitude() > 0.05f){
+        constexpr uint8_t lowBandBins = 5;   // ~0-250 Hz
+        constexpr uint8_t speechBandEnd = 64;
+
+        float lowBandAvg = 0.0f;
+        float lowBandPeak = 0.0f;
+        for(uint8_t i = 0; i < lowBandBins; ++i){
+            float bin = fftData[i];
+            lowBandAvg += bin;
+            if(bin > lowBandPeak)
+                lowBandPeak = bin;
+        }
+        lowBandAvg /= lowBandBins;
+
+        float speechBandAvg = 0.0f;
+        float speechBandPeak = 0.0f;
+        uint8_t speechBins = speechBandEnd - lowBandBins;
+        for(uint8_t i = lowBandBins; i < speechBandEnd; ++i){
+            float bin = fftData[i];
+            speechBandAvg += bin;
+            if(bin > speechBandPeak)
+                speechBandPeak = bin;
+        }
+        speechBandAvg /= float(speechBins);
+
+        float sensitivity = static_cast<float>(Menu::GetMicLevel()) / 10.0f;
+        float lowBandWeight = 0.35f + (1.0f - sensitivity) * 0.5f;
+        float speechEnergy = speechBandPeak * 0.7f + speechBandAvg * 0.3f;
+        float noiseEnergy = lowBandPeak * 0.6f + lowBandAvg * 0.4f;
+        float mouthMagnitude = speechEnergy - noiseEnergy * lowBandWeight;
+        if(mouthMagnitude < 0.0f)
+            mouthMagnitude = 0.0f;
+
+        mouthMagnitude *= 1.2f + sensitivity * 0.6f;
+        if(mouthMagnitude > 1.0f)
+            mouthMagnitude = 1.0f;
+
+        static float mouthFiltered = 0.0f;
+        float attack = 0.35f + sensitivity * 0.4f;
+        float release = 0.08f + (1.0f - sensitivity) * 0.2f;
+        if(mouthMagnitude > mouthFiltered)
+            mouthFiltered += (mouthMagnitude - mouthFiltered) * attack;
+        else
+            mouthFiltered += (mouthMagnitude - mouthFiltered) * release;
+        if(mouthFiltered < 0.0f)
+            mouthFiltered = 0.0f;
+        if(mouthFiltered > 1.0f)
+            mouthFiltered = 1.0f;
+
+        eEA.AddParameterFrame(Viseme::SS + 100, mouthFiltered);
+
+        if(mouthFiltered > 0.08f){
             voiceDetection.Update(MicrophoneFourier::GetFourierFiltered(), MicrophoneFourier::GetSampleRate());
     
             eEA.AddParameterFrame(Viseme::EE + 100, voiceDetection.GetViseme(Viseme::EE));
