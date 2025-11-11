@@ -293,7 +293,7 @@ public:
 
         MicrophoneFourierIT::Update();
 
-        sA.Update(MicrophoneFourierIT::GetFourierFiltered());
+        sA.Update(MicrophoneFourierIT::GetFourier());
         sA.SetHueAngle(ratio * 360.0f * 4.0f);
         sA.SetMirrorYState(Menu::MirrorSpectrumAnalyzer());
         sA.SetFlipYState(!Menu::MirrorSpectrumAnalyzer());
@@ -324,15 +324,15 @@ public:
             else if (mode == 5) Calm();
             else if (mode == 6) Sad();
             else if (mode == 7) {
-                aRG.Update(MicrophoneFourierIT::GetFourierFiltered());
+                aRG.Update(MicrophoneFourierIT::GetWaveform());
                 AudioReactiveGradientFace();
             }
             else if (mode == 8){
-                oSC.Update(MicrophoneFourierIT::GetSamples());
+                oSC.Update(MicrophoneFourierIT::GetWaveformTrace());
                 OscilloscopeFace();
             }
             else {
-                sA.Update(MicrophoneFourierIT::GetFourierFiltered());
+                sA.Update(MicrophoneFourierIT::GetFourier());
                 SpectrumAnalyzerFace();
             }
         }
@@ -368,3 +368,6 @@ public:
         pM.GetObject()->UpdateTransform();
     }
 };
+
+
+

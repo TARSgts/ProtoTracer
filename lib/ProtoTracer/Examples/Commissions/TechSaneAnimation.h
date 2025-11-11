@@ -329,15 +329,15 @@ public:
                 else if (mode == 5) Sad();
                 else if (mode == 6) TechSaneFace();
                 else if (mode == 7) {
-                    aRG.Update(MicrophoneFourier::GetFourierFiltered());
+                    aRG.Update(MicrophoneFourier::GetWaveform());
                     AudioReactiveGradientFace();
                 }
                 else if (mode == 8){
-                    oSC.Update(MicrophoneFourier::GetSamples());
+                    oSC.Update(MicrophoneFourier::GetWaveformTrace());
                     OscilloscopeFace();
                 }
                 else {
-                    sA.Update(MicrophoneFourier::GetWaveform());
+                    sA.Update(MicrophoneFourier::GetFourier());
                     SpectrumAnalyzerFace();
                 }
             }
@@ -398,4 +398,8 @@ public:
         }
     }
 };
+
+
+
+
 

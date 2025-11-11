@@ -364,15 +364,15 @@ public:
             else if (mode == 7) Nervous();
             else if (mode == 8) Stinky();
             else if (mode == 9) {
-                aRG.Update(MicrophoneFourierIT::GetFourierFiltered());
+                aRG.Update(MicrophoneFourierIT::GetWaveform());
                 AudioReactiveGradientFace();
             }
             else if (mode == 10){
-                oSC.Update(MicrophoneFourierIT::GetSamples());
+                oSC.Update(MicrophoneFourierIT::GetWaveformTrace());
                 OscilloscopeFace();
             }
             else {
-                sA.Update(MicrophoneFourierIT::GetFourierFiltered());
+                sA.Update(MicrophoneFourierIT::GetFourier());
                 SpectrumAnalyzerFace();
             }
         }
@@ -420,3 +420,6 @@ public:
         pMTears.GetObject()->UpdateTransform();
     }
 };
+
+
+

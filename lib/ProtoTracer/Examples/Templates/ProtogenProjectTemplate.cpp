@@ -689,18 +689,14 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 
     cameraSize = camMax - camMin;
 
-    //sA.SetSize(cameraSize);
-    //sA.SetPosition(cameraSize / 2.0f);
+    Vector2D analyzerSize = cameraSize;
+    Vector2D analyzerPosition = cameraSize.Divide(2.0f);
 
-    //oSC.SetSize(cameraSize);
-    //oSC.SetPosition(cameraSize / 2.0f);
+    sA.SetSize(analyzerSize);
+    sA.SetPosition(analyzerPosition);
 
-    
-    sA.SetSize(Vector2D(220.0f, 72.0f));
-    sA.SetPosition(Vector2D());
-
-    oSC.SetSize(Vector2D(220.0f, 72.0f));
-    oSC.SetPosition(Vector2D());
+    oSC.SetSize(analyzerSize);
+    oSC.SetPosition(analyzerPosition);
 
     hud.SetFaceMax(camMax);
     hud.SetFaceMin(camMin);
@@ -731,4 +727,5 @@ void ProtogenProject::Initialize() {
     Menu::SetFaceState(0);
     Menu::SetCurrentMenu(0);
 }
+
 

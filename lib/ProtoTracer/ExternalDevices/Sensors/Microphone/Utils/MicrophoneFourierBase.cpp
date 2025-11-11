@@ -17,6 +17,7 @@ float MicrophoneFourierBase::outputMagn[];
 float MicrophoneFourierBase::outputData[];
 float MicrophoneFourierBase::outputDataFilt[];
 float MicrophoneFourierBase::outputWaveform[];
+float MicrophoneFourierBase::outputWaveformTrace[];
 float MicrophoneFourierBase::waveformNormalization = 1.0f / 32768.0f;
 FFTFilter MicrophoneFourierBase::fftFilters[];
 
@@ -26,6 +27,7 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
     if (validSamples == 0) {
         for (uint16_t i = 0; i < OutputBins; ++i) {
             outputWaveform[i] = 0.0f;
+            outputWaveformTrace[i] = 0.0f;
         }
         return;
     }
@@ -48,23 +50,20 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
         }
     }
 
-    if (maxDeviation < 1e-3f) {
+    float normalization = waveformNormalization > 0.0f ? waveformNormalization : 1.0f / 32768.0f;
+    float normalizedPeak = maxDeviation * normalization;
+    if (normalizedPeak < 0.01f) {
         for (uint16_t i = 0; i < OutputBins; ++i) {
             outputWaveform[i] = 0.0f;
+            outputWaveformTrace[i] = 0.0f;
         }
         return;
     }
 
-    constexpr float noiseFloor = 0.02f;
-    constexpr float visualizationBoost = 8.0f;
-    if (waveformNormalization <= 0.0f) {
-        waveformNormalization = 1.0f / 32768.0f;
-    }
-
-    float amplitudeScale = maxDeviation * waveformNormalization * visualizationBoost;
-    if (amplitudeScale > 1.0f) {
-        amplitudeScale = 1.0f;
-    }
+    constexpr float magnitudeBoost = 6.0f;
+    constexpr float magnitudeNoiseFloor = 0.02f;
+    constexpr float traceBoost = 4.0f;
+    constexpr float traceNoiseFloor = 0.01f;
 
     for (uint16_t bin = 0; bin < OutputBins; ++bin) {
         uint32_t start = (uint32_t(bin) * validSamples) / OutputBins;
@@ -72,6 +71,7 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
 
         if (start >= validSamples) {
             outputWaveform[bin] = 0.0f;
+            outputWaveformTrace[bin] = 0.0f;
             continue;
         }
 
@@ -82,9 +82,12 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
             end = validSamples;
         }
 
-        float binAccum = 0.0f;
+        float absAccum = 0.0f;
+        float signedAccum = 0.0f;
         for (uint32_t idx = start; idx < end; ++idx) {
-            binAccum += fabsf(inputStorage[idx] - mean);
+            float centered = inputStorage[idx] - mean;
+            absAccum += fabsf(centered);
+            signedAccum += centered;
         }
 
         uint32_t sampleCount = end - start;
@@ -92,17 +95,24 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
             sampleCount = 1;
         }
 
-        float normalized = binAccum / float(sampleCount); // average absolute deviation
-        normalized = normalized / maxDeviation; // relative energy per bin (0-1)
-        float value = normalized * amplitudeScale;
-
-        if (value <= noiseFloor) {
-            outputWaveform[bin] = 0.0f;
+        float averageAbs = (absAccum / float(sampleCount)) * normalization;
+        float magnitude = averageAbs * magnitudeBoost;
+        if (magnitude <= magnitudeNoiseFloor) {
+            magnitude = 0.0f;
         } else {
-            value -= noiseFloor;
-            if (value > 1.0f) value = 1.0f;
-            outputWaveform[bin] = value;
+            magnitude = (magnitude - magnitudeNoiseFloor);
+            if (magnitude > 1.0f) magnitude = 1.0f;
         }
+
+        float averageSigned = (signedAccum / float(sampleCount)) * normalization * traceBoost;
+        if (averageSigned > 1.0f) averageSigned = 1.0f;
+        if (averageSigned < -1.0f) averageSigned = -1.0f;
+        if (fabsf(averageSigned) <= traceNoiseFloor) {
+            averageSigned = 0.0f;
+        }
+
+        outputWaveform[bin] = magnitude;
+        outputWaveformTrace[bin] = averageSigned;
     }
 }
 
@@ -139,6 +149,10 @@ float* MicrophoneFourierBase::GetFourierFiltered() {
 
 float* MicrophoneFourierBase::GetWaveform() {
     return outputWaveform;
+}
+
+float* MicrophoneFourierBase::GetWaveformTrace() {
+    return outputWaveformTrace;
 }
 
 void MicrophoneFourierBase::SetWaveformNormalization(float normalization) {

@@ -32,6 +32,10 @@ private:
     uint8_t colors; ///< Number of colors in the gradient.
     float* data; ///< Pointer to the input audio data.
     float bounceData[128]; ///< Processed bounce data for visualization.
+    float processedData[128] = {0.0f}; ///< Locally processed spectrum values.
+    float smoothedData[128] = {0.0f}; ///< Smoothed magnitudes for stability.
+    float peakHoldData[128] = {0.0f}; ///< Peak hold values to keep spikes visible.
+    float autoGain = 1.0f; ///< Adaptive gain factor.
     uint8_t bins = 128; ///< Number of frequency bins.
     bool mirrorY = false; ///< Whether to mirror the visualization along the Y-axis.
     bool flipY = false; ///< Whether to flip the visualization along the Y-axis.

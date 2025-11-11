@@ -1,4 +1,5 @@
 #include "Oscilloscope.h"
+#include <cmath>
 
 Oscilloscope::Oscilloscope(Vector2D size, Vector2D offset) {
     this->size = size.Divide(2.0f);
@@ -39,35 +40,50 @@ void Oscilloscope::SetHueAngle(float hueAngle) {
 void Oscilloscope::Update(float* data) {
     this->data = data;
 
-    minValue = minF.Filter(data[bins / 2 + 1]);
-    maxValue = maxF.Filter(data[bins / 2 + 1]);
+    if (data == nullptr) {
+        minValue = -1.0f;
+        maxValue = 1.0f;
+        midPoint = 0.0f;
+        return;
+    }
+
+    float sample = data[bins / 2];
+    minValue = minF.Filter(sample);
+    maxValue = maxF.Filter(sample);
+
+    if (fabsf(maxValue - minValue) < 0.05f) {
+        maxValue = minValue + 0.05f;
+    }
 
     midPoint = (maxValue - minValue) / 2.0f + minValue;
 }
 
 RGBColor Oscilloscope::GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) {
+    if (data == nullptr) return RGBColor();
+
     Vector2D rPos = Mathematics::IsClose(angle, 0.0f, 0.1f) ? Vector2D(position.X, position.Y) - offset : Vector2D(position.X, position.Y).Rotate(angle, offset) - offset;
 
     // Outside of size bounds
     if (rPos.X < -size.X || rPos.X > size.X) return RGBColor();
     if (rPos.Y < -size.Y || rPos.Y > size.Y) return RGBColor();
 
-    uint8_t x = uint8_t(Mathematics::Map(rPos.X, -size.X, size.X, float(bins - 1), float(bins - 1) / 2));
+    float mappedX = Mathematics::Map(rPos.X, -size.X, size.X, 0.0f, float(bins - 1));
+    if (mappedX < 0.0f) mappedX = 0.0f;
+    float maxIndex = float(bins - 2);
+    if (mappedX > maxIndex) mappedX = maxIndex;
 
-    if (bins > x && 0 > x) return RGBColor();
+    uint8_t x = static_cast<uint8_t>(mappedX);
+    float ratio = mappedX - float(x);
 
-    float xDistance = size.X / float(bins) * x - size.X;
-    float xDistance2 = size.X / float(bins) * (x + 2) - size.X;
-    float ratio = Mathematics::Map(rPos.X, xDistance, xDistance2, 0.0f, 1.0f); // ratio between two bins
+    float firstPoint = Mathematics::Map(data[x], minValue, maxValue, 0.0f, 1.0f);
+    float secondPoint = Mathematics::Map(data[x + 1], minValue, maxValue, 0.0f, 1.0f);
 
-    float firstPoint = Mathematics::Map(data[x], minValue, maxValue, 0.0f, 0.75f);
-    float secondPoint = Mathematics::Map(data[x + 2], minValue, maxValue, 0.0f, 0.75f);
+    float height = Mathematics::CosineInterpolation(firstPoint, secondPoint, ratio); // 0..1
+    float yRatio = Mathematics::Map(rPos.Y, -size.Y, size.Y, 0.0f, 1.0f);
 
-    float height = Mathematics::CosineInterpolation(firstPoint, secondPoint, ratio); // 0->1.0f of max height of color
-    float yColor = Mathematics::Map(rPos.Y, 0.0f, size.Y, 1.0f, 0.0f);
-
-    if (rPos.Y < height * size.Y / 2.0f && rPos.Y > height * size.Y / 2.0f - size.Y * 0.1f) {
-        return material->GetRGB(Vector3D(1.0f + height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
+    const float traceThickness = 0.05f;
+    if (fabsf(yRatio - height) <= traceThickness) {
+        return material->GetRGB(Vector3D(1.0f - height, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
     } else {
         return RGBColor(0, 0, 0);
     }

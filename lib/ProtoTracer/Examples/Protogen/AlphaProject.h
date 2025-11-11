@@ -700,13 +700,13 @@ public:
         float y = cosf(ratio * 3.14159f / 180.0f * 360.0f * 3.0f) * 3.0f;
 
         MicrophoneFourier::Update();
-        sA.Update(MicrophoneFourier::GetWaveform());
+        sA.Update(MicrophoneFourier::GetFourier());
         sA.SetRotation(20.0f);
         sA.SetHueAngle(ratio * 360.0f * 4.0f);
         sA.SetMirrorYState(true);//MenuButtonHandler::MirrorSpectrumAnalyzer());
         sA.SetFlipYState(false);//!MenuButtonHandler::MirrorSpectrumAnalyzer());
 
-        aRG.Update(MicrophoneFourier::GetFourierFiltered());
+        aRG.Update(MicrophoneFourier::GetWaveform());
         aRG.SetHueAngle(ratio * 360.0f * 8.0f);
         aRG.SetRotation(ratio * 360.0f * 2.0f);
         aRG.SetPosition(Vector2D(15.0f + x * 4.0f, 120.0f + y * 4.0f));
@@ -781,4 +781,7 @@ public:
         pM.GetObject()->UpdateTransform();
     }
 };
+
+
+
 

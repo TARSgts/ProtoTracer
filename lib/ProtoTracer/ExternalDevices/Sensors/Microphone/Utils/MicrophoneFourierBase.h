@@ -46,7 +46,8 @@ protected:
     static float outputData[OutputBins]; ///< Processed FFT data for output bins.
     static float outputDataFilt[OutputBins]; ///< Filtered FFT data for output bins.
     static FFTFilter fftFilters[OutputBins]; ///< Array of FFT filters for post-processing.
-    static float outputWaveform[OutputBins]; ///< Normalized time-domain bins for non-FFT consumers.
+    static float outputWaveform[OutputBins]; ///< Envelope magnitudes for time-domain visuals.
+    static float outputWaveformTrace[OutputBins]; ///< Signed waveform trace for oscilloscope visuals.
     static float waveformNormalization; ///< Normalization factor based on ADC resolution.
 
     static FFT<FFTSize> fft; ///< FFT processor instance.
@@ -109,6 +110,13 @@ public:
      * @return Pointer to the array of waveform bins.
      */
     static float* GetWaveform();
+
+    /**
+     * @brief Retrieves the signed waveform trace data.
+     *
+     * @return Pointer to the array containing the normalized waveform trace.
+     */
+    static float* GetWaveformTrace();
 
     /**
      * @brief Sets the normalization factor used when generating waveform data.

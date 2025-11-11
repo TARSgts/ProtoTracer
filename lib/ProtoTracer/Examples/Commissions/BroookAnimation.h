@@ -410,15 +410,15 @@ public:
             else if (mode == 8) Dead();
             else if (mode == 9) Question();
             else if (mode == 10) {
-                aRG.Update(MicrophoneFourierIT::GetFourierFiltered());
+                aRG.Update(MicrophoneFourierIT::GetWaveform());
                 AudioReactiveGradientFace();
             }
             else if (mode == 11){
-                oSC.Update(MicrophoneFourierIT::GetSamples());
+                oSC.Update(MicrophoneFourierIT::GetWaveformTrace());
                 OscilloscopeFace();
             }
             else if (mode == 12){
-                sA.Update(MicrophoneFourierIT::GetFourierFiltered());
+                sA.Update(MicrophoneFourierIT::GetFourier());
                 SpectrumAnalyzerFace();
             }
             else{
@@ -456,3 +456,6 @@ public:
         pME.GetObject()->UpdateTransform();
     }
 };
+
+
+

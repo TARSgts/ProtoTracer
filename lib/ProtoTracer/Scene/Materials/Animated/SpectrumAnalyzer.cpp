@@ -58,34 +58,88 @@ void SpectrumAnalyzer::SetHueAngle(float hueAngle) {
 }
 
 void SpectrumAnalyzer::Update(float* readData) {
-    data = readData;
+    if (!readData) {
+        data = processedData;
+        return;
+    }
 
-    for (uint8_t i = 0; i < 128; i++) {
-        if (bounce) {
-            bounceData[i] = bPhy[i]->Calculate(data[i], 0.1f);
+    float peak = 0.0f;
+    constexpr float emphasisSlope = 0.3f;
+    constexpr float lowBinBoost = 1.3f;
+    constexpr float riseCoeff = 0.4f;
+    constexpr float fallCoeff = 0.08f;
+    constexpr float peakFall = 0.94f;
+
+    for (uint8_t i = 0; i < bins; i++) {
+        float value = Mathematics::Constrain(readData[i], 0.0f, 1.0f);
+        float emphasis = 0.85f + (float(i) / float(bins - 1)) * emphasisSlope;
+        if (i < 6) emphasis *= lowBinBoost;
+        value = Mathematics::Constrain(value * emphasis, 0.0f, 1.2f);
+
+        float previous = smoothedData[i];
+        float coeff = (value > previous) ? riseCoeff : fallCoeff;
+        float smooth = previous + (value - previous) * coeff;
+        smoothedData[i] = smooth;
+
+        if (smooth > peakHoldData[i]) {
+            peakHoldData[i] = smooth;
         } else {
-            bounceData[i] = data[i];
+            peakHoldData[i] *= peakFall;
         }
+
+        processedData[i] = peakHoldData[i];
+        if (processedData[i] > peak) peak = processedData[i];
+    }
+
+    constexpr float peakTarget = 0.9f;
+    if (peak > 0.005f) {
+        float desiredGain = peakTarget / peak;
+        desiredGain = Mathematics::Constrain(desiredGain, 0.6f, 2.2f);
+        float response = desiredGain > autoGain ? 0.18f : 0.06f;
+        autoGain += (desiredGain - autoGain) * response;
+    } else {
+        autoGain += (1.0f - autoGain) * 0.04f;
+    }
+
+    for (uint8_t i = 0; i < bins; i++) {
+        float value = Mathematics::Constrain(processedData[i] * autoGain, 0.0f, 1.1f);
+        processedData[i] = powf(value, 0.9f);
+    }
+
+    if (bounce) {
+        for (uint8_t i = 0; i < bins; i++) {
+            bounceData[i] = bPhy[i]->Calculate(processedData[i], 0.1f);
+        }
+        data = bounceData;
+    } else {
+        data = processedData;
     }
 }
 
 RGBColor SpectrumAnalyzer::GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) {
-    Vector2D rPos = Mathematics::IsClose(angle, 0.0f, 0.1f) ? Vector2D(position.X, position.Y) - offset : Vector2D(position.X, position.Y).Rotate(angle, offset) - offset;
+    Vector2D rPos = Mathematics::IsClose(angle, 0.0f, 0.1f)
+                        ? Vector2D(position.X, position.Y) - offset
+                        : Vector2D(position.X, position.Y).Rotate(angle, offset) - offset;
 
-    if (-size.X > rPos.X && size.X < rPos.X) return RGBColor();
-    if (-size.Y > rPos.Y && size.Y < rPos.Y) return RGBColor();
+    if (data == nullptr) return RGBColor();
 
-    uint8_t x = uint8_t(Mathematics::Map(rPos.X, -size.X, size.X, float(bins), 0.0f));
+    if (rPos.X < -size.X || rPos.X > size.X) return RGBColor();
+    if (rPos.Y < -size.Y || rPos.Y > size.Y) return RGBColor();
 
-    if (bins > x && 0 > x) return RGBColor();
+    float mapped = Mathematics::Map(rPos.X, -size.X, size.X, 0.0f, float(bins - 1));
+    if (mapped < 0.0f) mapped = 0.0f;
+    float maxIndex = float(bins - 1);
+    if (mapped > maxIndex) mapped = maxIndex;
 
-    float xDistance = size.X / float(bins) * x - size.X;
-    float xDistance2 = size.X / float(bins) * (x + 1) - size.X;
-    float ratio = Mathematics::Map(rPos.X, xDistance, xDistance2, 0.0f, 1.0f); // ratio between two bins
-    float height = bounce ? Mathematics::CosineInterpolation(bounceData[x], bounceData[x + 1], ratio) : Mathematics::CosineInterpolation(data[x], data[x + 1], ratio); // 0->1.0f of max height of color
+    uint8_t x = uint8_t(mapped);
+    uint8_t nextIndex = x < bins - 1 ? x + 1 : x;
+    float ratio = mapped - float(x);
+
+    float firstVal = bounce ? bounceData[x] : data[x];
+    float secondVal = bounce ? bounceData[nextIndex] : data[nextIndex];
+    float height = Mathematics::CosineInterpolation(firstVal, secondVal, ratio);
+    height = Mathematics::Constrain(height * 2.6f, 0.0f, 1.0f);
     float yColor;
-
-    height = height * 3.0f;
 
     if (mirrorY) {
         yColor = Mathematics::Map(fabsf(rPos.Y), size.Y, 0.0f, 1.0f, 0.0f);
