@@ -337,7 +337,7 @@ public:
                     OscilloscopeFace();
                 }
                 else {
-                    sA.Update(MicrophoneFourier::GetFourierFiltered());
+                    sA.Update(MicrophoneFourier::GetWaveform());
                     SpectrumAnalyzerFace();
                 }
             }
@@ -398,3 +398,4 @@ public:
         }
     }
 };
+

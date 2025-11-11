@@ -297,6 +297,8 @@ void MicrophoneFourier::SamplerCallback(AnalogBufferDMA* dma_buffer_instance, in
         data++;
     }
 
+    GenerateWaveform(samplesStoragePos);
+
     // Clear the QuadTimer Interrupt
     dma_buffer_instance->clearInterrupt();
 
@@ -321,6 +323,7 @@ void MicrophoneFourier::Initialize(uint8_t pin, uint32_t sampleRate, float minDB
 
     adc->adc1->setAveraging(32);
     adc->adc1->setResolution(16);
+    SetWaveformNormalization(1.0f / 32768.0f);
     adc->adc1->calibrate();
     adc->adc1->wait_for_cal();
 
@@ -347,6 +350,7 @@ void MicrophoneFourier::Initialize(uint8_t pin, uint8_t gain_pin, uint32_t sampl
 
     adc->adc1->setAveraging(32);
     adc->adc1->setResolution(16);
+    SetWaveformNormalization(1.0f / 32768.0f);
     adc->adc1->calibrate();
     adc->adc1->wait_for_cal();
 

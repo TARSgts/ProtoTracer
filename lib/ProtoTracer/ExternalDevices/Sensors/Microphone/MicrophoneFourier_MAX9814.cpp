@@ -40,6 +40,7 @@ void MicrophoneFourier::Initialize(uint8_t pin, uint16_t sampleRate, float minDB
 
     pinMode(pin, INPUT);
     analogReadResolution(12);
+    SetWaveformNormalization(1.0f / 2048.0f);
 
     MicrophoneFourier::sampleRate = sampleRate;
     MicrophoneFourier::samples = 0;
@@ -66,6 +67,8 @@ void MicrophoneFourier::Reset() {
 
 void MicrophoneFourier::Update() {
     if (!samplesReady && timeStep.IsReady()) return;
+
+    GenerateWaveform(samplesStorage);
 
     fft.Radix2FFT(inputSamp);
     fft.ComplexMagnitude(inputSamp, outputMagn);

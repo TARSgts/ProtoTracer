@@ -199,7 +199,7 @@ public:
         uint8_t mode = MenuButtonHandler::GetFaceState();//change by button press
 
         MicrophoneFourier::Update();
-        sA.Update(MicrophoneFourier::GetFourierFiltered());
+        sA.Update(MicrophoneFourier::GetWaveform());
         sA.SetHueAngle(ratio * 360.0f * 4.0f);
         sA.SetMirrorYState(MenuButtonHandler::MirrorSpectrumAnalyzer());
         sA.SetFlipYState(!MenuButtonHandler::MirrorSpectrumAnalyzer());
@@ -240,3 +240,4 @@ public:
         pM.GetObject()->UpdateTransform();
     }
 };
+

@@ -583,7 +583,7 @@ void ProtogenProject::AddBackgroundMaterialFrame(Material& material, float opaci
 }
 
 void ProtogenProject::SpectrumAnalyzerFace(){
-    sA.Update(MicrophoneFourier::GetFourierFiltered());
+    sA.Update(MicrophoneFourier::GetWaveform());
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
     eEA.AddParameterFrame(offsetFaceIndSA, 1.0f);
@@ -731,3 +731,4 @@ void ProtogenProject::Initialize() {
     Menu::SetFaceState(0);
     Menu::SetCurrentMenu(0);
 }
+

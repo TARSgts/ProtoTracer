@@ -46,8 +46,17 @@ protected:
     static float outputData[OutputBins]; ///< Processed FFT data for output bins.
     static float outputDataFilt[OutputBins]; ///< Filtered FFT data for output bins.
     static FFTFilter fftFilters[OutputBins]; ///< Array of FFT filters for post-processing.
+    static float outputWaveform[OutputBins]; ///< Normalized time-domain bins for non-FFT consumers.
+    static float waveformNormalization; ///< Normalization factor based on ADC resolution.
 
     static FFT<FFTSize> fft; ///< FFT processor instance.
+
+    /**
+     * @brief Converts the latest raw samples into normalized waveform bins.
+     *
+     * @param validSamples Number of valid entries currently stored in inputStorage.
+     */
+    static void GenerateWaveform(uint16_t validSamples);
 
 public:
     /**
@@ -93,6 +102,20 @@ public:
      * @return Pointer to the array of filtered FFT output data.
      */
     static float* GetFourierFiltered();
+
+    /**
+     * @brief Retrieves normalized time-domain waveform data.
+     *
+     * @return Pointer to the array of waveform bins.
+     */
+    static float* GetWaveform();
+
+    /**
+     * @brief Sets the normalization factor used when generating waveform data.
+     *
+     * @param normalization Reciprocal of the ADC half-scale (e.g., 1/32768).
+     */
+    static void SetWaveformNormalization(float normalization);
 
     /**
      * @brief Retrieves the current signal magnitude.

@@ -700,7 +700,7 @@ public:
         float y = cosf(ratio * 3.14159f / 180.0f * 360.0f * 3.0f) * 3.0f;
 
         MicrophoneFourier::Update();
-        sA.Update(MicrophoneFourier::GetFourierFiltered());
+        sA.Update(MicrophoneFourier::GetWaveform());
         sA.SetRotation(20.0f);
         sA.SetHueAngle(ratio * 360.0f * 4.0f);
         sA.SetMirrorYState(true);//MenuButtonHandler::MirrorSpectrumAnalyzer());
@@ -781,3 +781,4 @@ public:
         pM.GetObject()->UpdateTransform();
     }
 };
+
