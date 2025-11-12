@@ -1,0 +1,70 @@
+    }
+}
+
+void ProtogenProject::SetMaterialColor(){
+    switch(Menu::GetFaceColor()){
+        case 1: materialAnimator.AddMaterialFrame(yellowMaterial, 0.8f); break;
+        case 2: materialAnimator.AddMaterialFrame(orangeMaterial, 0.8f); break;
+        case 3: materialAnimator.AddMaterialFrame(whiteMaterial, 0.8f); break;
+        case 4: materialAnimator.AddMaterialFrame(greenMaterial, 0.8f); break;
+        case 5: materialAnimator.AddMaterialFrame(purpleMaterial, 0.8f); break;
+        case 6: materialAnimator.AddMaterialFrame(redMaterial, 0.8f); break;
+        case 7: materialAnimator.AddMaterialFrame(blueMaterial, 0.8f); break;
+        case 8: materialAnimator.AddMaterialFrame(rainbowSpiral, 0.8f); break;
+        case 9: materialAnimator.AddMaterialFrame(flowNoise, 0.8f); break;
+
+    oSC.SetHueAngle(ratio * 360.0f * 8.0f);
+    
+    SetMaterialColor();
+    RGBColor hueFront = RGBColor(255, 0, 0).HueShift(Menu::GetHueF() * 36);
+    RGBColor hueBack  = RGBColor(255, 0, 0).HueShift(Menu::GetHueB() * 36);
+
+    gradientSpectrum[0] = hueFront;
+    gradientSpectrum[1] = hueBack;
+    gradientMat.UpdateGradient(gradientSpectrum);
+
+    flowNoise.SetGradient(hueFront, 0);
+    flowNoise.SetGradient(hueBack, 1);
+
+    backgroundMaterial.AddMaterialFrame(material, opacity);
+}
+
+void ProtogenProject::SpectrumAnalyzerFace(){
+    sA.Update(MicrophoneFourier::GetWaveform());
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndSA, 1.0f);
+
+    materialAnimator.AddMaterialFrame(sA, offsetFaceSA);
+    backgroundMaterial.AddMaterialFrame(sA, offsetFaceSA);
+
+    SpectrumAnalyzerCallback();
+}
+    SpectrumAnalyzerCallback();
+}
+
+void ProtogenProject::AudioReactiveGradientFace(){
+    aRG.Update(MicrophoneFourier::GetFourierFiltered());
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndARG, 1.0f);
+
+    materialAnimator.AddMaterialFrame(aRG, offsetFaceARG);
+    backgroundMaterial.AddMaterialFrame(aRG, offsetFaceARG);
+
+    AudioReactiveGradientCallback();
+}
+    AudioReactiveGradientCallback();
+}
+
+void ProtogenProject::OscilloscopeFace(){
+    oSC.Update(MicrophoneFourier::GetSamples());
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndOSC, 1.0f);
+
+    materialAnimator.AddMaterialFrame(oSC, offsetFaceOSC);
+    backgroundMaterial.AddMaterialFrame(oSC, offsetFaceOSC);
+
+    OscilloscopeCallback();
+}

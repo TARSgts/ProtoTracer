@@ -1,0 +1,6 @@
+    backgroundMaterial.AddMaterial(Material::Replace, &blackMaterial, 40, 0.0f, 1.0f);//layer 11
+    backgroundMaterial.AddMaterial(Material::Lighten, &bsodText, 1, 0.0f, 1.0f);//BSOD text overlay (normally off)
+    backgroundMaterial.AddMaterial(Material::Add, &sA, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
+}

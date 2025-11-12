@@ -1,0 +1,16 @@
+    aRG.SetRotation(ratio * 360.0f * 2.0f);
+
+    oSC.SetHueAngle(ratio * 360.0f * 8.0f);
+    
+    // If BSOD is active, override face/background with solid blue, otherwise follow menu color
+    if (bsodActive) {
+        materialAnimator.AddMaterialFrame(blueMaterial, 1.0f);
+        backgroundMaterial.AddMaterialFrame(blueMaterial, 1.0f);
+    oSC.SetHueAngle(ratio * 360.0f * 8.0f);
+    
+    // If BSOD is active, override face/background with solid blue, otherwise follow menu color
+    if (bsodActive) {
+        materialAnimator.AddMaterialFrame(blueMaterial, 1.0f);
+        backgroundMaterial.AddMaterialFrame(blueMaterial, 1.0f);
+    } else {
+        SetMaterialColor();
