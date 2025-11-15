@@ -280,32 +280,8 @@ void HeadsUpDisplay::ResetI2CBus() {
 
 void HeadsUpDisplay::Update() {
     if (timeStep.IsReady() && didBegin){
-        if (splashFinished){// Draw content once splash screens are finished
-            if (overrideActive) {
-                display.clearDisplay();
-                display.setTextSize(2); // larger for readability
-                display.setTextColor(0);
-
-                // Simple centered-ish layout
-                int16_t x1, y1; uint16_t w, h;
-
-                String l1 = overrideL1.length() ? overrideL1 : String("BSOD");
-                display.getTextBounds(l1, 0, 0, &x1, &y1, &w, &h);
-                display.setCursor((SCREEN_WIDTH - (int)w) / 2, 16);
-                display.println(l1);
-
-                String l2 = overrideL2;
-                display.getTextBounds(l2, 0, 0, &x1, &y1, &w, &h);
-                display.setCursor((SCREEN_WIDTH - (int)w) / 2, 34);
-                display.println(l2);
-
-                String l3 = overrideL3;
-                display.getTextBounds(l3, 0, 0, &x1, &y1, &w, &h);
-                display.setCursor((SCREEN_WIDTH - (int)w) / 2, 52);
-                display.println(l3);
-            } else {
-                UpdateFaceInformation();
-            }
+        if (splashFinished){// Draw the bitmap to the display at the specified top-left coordinate
+            UpdateFaceInformation();
         }
         else if (startMillis + splashTime > millis()){
             display.clearDisplay();
@@ -420,19 +396,5 @@ void HeadsUpDisplay::CheckInvertPrintText(int16_t x, int16_t y, uint8_t menu, co
     display.println(str);
 
     display.setTextColor(0);
-}
-
-void HeadsUpDisplay::SetOverrideText(const String& l1, const String& l2, const String& l3){
-    overrideActive = true;
-    overrideL1 = l1;
-    overrideL2 = l2;
-    overrideL3 = l3;
-}
-
-void HeadsUpDisplay::ClearOverrideText(){
-    overrideActive = false;
-    overrideL1 = String();
-    overrideL2 = String();
-    overrideL3 = String();
 }
 

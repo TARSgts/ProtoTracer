@@ -66,12 +66,6 @@ private:
     Vector2D faceMax; ///< Maximum coordinate for face on display
     uint32_t startMillis; ///< Start time of the display for the splash screen
 
-    // Optional override screen (e.g., for BSOD messaging)
-    bool overrideActive = false;
-    String overrideL1;
-    String overrideL2;
-    String overrideL3;
-
 #ifdef SH1106
     static Adafruit_SH1106 display;
 #else
@@ -169,17 +163,4 @@ public:
      * @param str The string to print.
      */
     void CheckInvertPrintText(int16_t x, int16_t y, uint8_t menu, const String& str);
-
-    /**
-     * @brief Displays an override text screen until cleared.
-     *
-     * Calling this will replace the normal HUD with three lines of text
-     * until ClearOverrideText() is called.
-     */
-    void SetOverrideText(const String& l1, const String& l2, const String& l3);
-
-    /**
-     * @brief Clears the override text screen and restores normal HUD.
-     */
-    void ClearOverrideText();
 };

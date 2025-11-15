@@ -62,6 +62,56 @@
 #endif
 
 /**
+ * @def ENABLE_IR_REMOTE
+ * @brief Define to allow an IR receiver + remote to mirror the single-button menu actions.
+ *
+ * The remote provides short-press (value increment) and long-press (menu advance) actions in parallel
+ * with the physical buttons. This helper currently targets the standard single-button handler.
+ */
+#define ENABLE_IR_REMOTE
+#if DOXYGEN
+#define ENABLE_IR_REMOTE
+#endif
+
+#if defined(ENABLE_IR_REMOTE)
+#ifndef IR_REMOTE_RECEIVER_PIN
+#define IR_REMOTE_RECEIVER_PIN 0
+#endif
+
+#ifndef IR_REMOTE_UNUSED_CODE
+#define IR_REMOTE_UNUSED_CODE 0xFFFFFFFFUL
+#endif
+
+#ifndef IR_REMOTE_CODE_INCREMENT
+#define IR_REMOTE_CODE_INCREMENT 0xBA45FF00UL
+#endif
+
+#ifndef IR_REMOTE_CODE_NEXT_MENU
+#define IR_REMOTE_CODE_NEXT_MENU 0xB946FF00UL
+#endif
+
+#ifndef IR_REMOTE_REPEAT_DEBOUNCE_MS
+#define IR_REMOTE_REPEAT_DEBOUNCE_MS 250
+#endif
+
+/**
+ * @def ENABLE_IR_REMOTE_DEBUG
+ * @brief Define to stream every received IR code to the serial monitor.
+ *
+ * Useful while learning the button mappings on a new remote. Disable once configured to
+ * keep the log clean.
+ */
+#define ENABLE_IR_REMOTE_DEBUG
+#if DOXYGEN
+#define ENABLE_IR_REMOTE_DEBUG
+#endif
+
+#ifndef IR_REMOTE_DEBUG_STREAM
+#define IR_REMOTE_DEBUG_STREAM Serial
+#endif
+#endif
+
+/**
  * @def ENABLE_FACE_COLOR_STRIP
  * @brief Mirrors the current face color onto an external WS2812 strip.
  */

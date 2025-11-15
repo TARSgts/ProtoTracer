@@ -35,6 +35,11 @@ private:
     float processedData[128] = {0.0f}; ///< Locally processed spectrum values.
     float smoothedData[128] = {0.0f}; ///< Smoothed magnitudes for stability.
     float peakHoldData[128] = {0.0f}; ///< Peak hold values to keep spikes visible.
+    uint8_t peakHoldTimer[128] = {0}; ///< Number of frames to keep each peak before decay.
+    float visualData[128] = {0.0f}; ///< Smoothed data prepared for rendering.
+    bool visualReady = false; ///< Indicates whether visualData is up to date.
+    float noiseFloor = 0.02f; ///< Estimated idle noise floor.
+    uint8_t idleFrames = 0; ///< Count of consecutive quiet frames.
     float autoGain = 1.0f; ///< Adaptive gain factor.
     uint8_t bins = 128; ///< Number of frequency bins.
     bool mirrorY = false; ///< Whether to mirror the visualization along the Y-axis.
@@ -142,4 +147,8 @@ public:
      * @return The computed color as an RGBColor.
      */
     RGBColor GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) override;
+
+private:
+    void BuildVisualData(const float* source);
+    float SampleFrequency(float index) const;
 };

@@ -36,6 +36,9 @@
 #include "../SingleButtonMorseHandler.h"
 #else
 #include "../SingleButtonMenuHandler.h"
+#if defined(ENABLE_IR_REMOTE)
+#include "../IRRemoteReceiver.h"
+#endif
 #endif
 
 /**
@@ -193,6 +196,11 @@ private:
     static void SetDefaultEntries();
 
 public:
+    /**
+     * @brief Returns the compile-time menu count.
+     */
+    static constexpr uint8_t GetMenuCount() { return menuCount; }
+
     /**
      * @brief Initializes the Menu using a face count, input pin, holding time, and size.
      *

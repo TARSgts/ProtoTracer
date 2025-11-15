@@ -114,6 +114,16 @@ public:
      * @return The index of the active menu.
      */
     static uint8_t GetCurrentMenu();
+
+    /**
+     * @brief Simulates a short-press release to increment the current menu value.
+     */
+    static void TriggerShortPressAction();
+
+    /**
+     * @brief Simulates a long-press release to advance to the next menu.
+     */
+    static void TriggerLongPressAction();
 };
 
 #include "SingleButtonMenuHandler.tpp" // Include the template implementation.

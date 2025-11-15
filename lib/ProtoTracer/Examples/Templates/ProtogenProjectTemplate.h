@@ -30,7 +30,6 @@
 #include "../../Scene/Materials/Animated/SpectrumAnalyzer.h"
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
-#include "../../Scene/Materials/Special/Overlays/Text/TextEngine.h"
 
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
 #include "../../Utils/Signals/FunctionGenerator.h"
@@ -154,7 +153,6 @@ private:
     SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), true, true); 
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
-    TextEngine<3, 14> bsodText = TextEngine<3, 14>(true);
 
     // --- Project controllers ---
     BlinkTrack<2> blink; ///< Blink track handler.
@@ -189,15 +187,6 @@ private:
      * @brief Gesture sensor used for detecting "boops."
      */
     APDS9960 boop;
-
-    /**
-     * @brief Tracks long-press and BSOD overlay timing.
-     */
-    bool bsodActive = false;              ///< True while BSOD overlay is shown.
-    uint32_t bsodEndMillis = 0;           ///< millis() timestamp when BSOD should end.
-    uint32_t boopHoldStartMillis = 0;     ///< millis() when current boop press started.
-    bool boopRearmRequired = false;       ///< Require release before BSOD can retrigger.
-    uint32_t boopLastActiveMillis = 0;    ///< Last time boop/touch read active (for dropout grace).
 
     /**
      * @brief Voice detection system based on FFT data.

@@ -24,7 +24,6 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &rainbowSpiral, 40, 0.0f, 1.0f);//layer 9
     materialAnimator.AddMaterial(Material::Replace, &hRainbow, 40, 0.0f, 1.0f);//layer 10
     materialAnimator.AddMaterial(Material::Replace, &blackMaterial, 40, 0.0f, 1.0f);//layer 11
-    materialAnimator.AddMaterial(Material::Lighten, &bsodText, 1, 0.0f, 1.0f);//BSOD text overlay (normally off)
     materialAnimator.AddMaterial(Material::Replace, &sA, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
@@ -41,7 +40,6 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Replace, &rainbowSpiral, 40, 0.0f, 1.0f);//layer 9
     backgroundMaterial.AddMaterial(Material::Replace, &hRainbow, 40, 0.0f, 1.0f);//layer 10
     backgroundMaterial.AddMaterial(Material::Replace, &blackMaterial, 40, 0.0f, 1.0f);//layer 11
-    backgroundMaterial.AddMaterial(Material::Lighten, &bsodText, 1, 0.0f, 1.0f);//BSOD text overlay (normally off)
     backgroundMaterial.AddMaterial(Material::Add, &sA, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
@@ -238,62 +236,6 @@ void ProtogenProject::UpdateFace(float ratio) {
         if (ttpActive) {
             isBooped = true;
         }
-
-        // Long-press detection for BSOD trigger (TTP223-driven)
-        const uint32_t now = millis();
-
-        // End BSOD after 10 seconds
-        if (bsodActive && now >= bsodEndMillis) {
-            bsodActive = false;
-            hud.ClearOverrideText(); // restore normal HUD when BSOD ends
-        }
-
-        if (!bsodActive) {
-            // Require a release before allowing another BSOD trigger
-            if (boopRearmRequired) {
-                if (!isBooped) {
-                    boopRearmRequired = false;
-                    boopHoldStartMillis = 0;
-                }
-            } else {
-                // Add short dropout grace to tolerate brief touch sensor dips on TTP223 ONLY
-                static uint32_t ttpLastActiveMillis = 0;
-                const uint32_t boopGraceMs = 250UL;
-                if (ttpActive) {
-                    ttpLastActiveMillis = now;
-                }
-                const bool longPressConsideredActive = ttpActive || (now - ttpLastActiveMillis <= boopGraceMs);
-
-                if (longPressConsideredActive) {
-                    if (boopHoldStartMillis == 0) {
-                        boopHoldStartMillis = now;
-                    } else if (now - boopHoldStartMillis >= 8000UL) { // 8 seconds hold
-                        bsodActive = true;
-                        bsodEndMillis = now + 10000UL; // show BSOD for 10 seconds
-                        boopHoldStartMillis = 0;
-                        boopRearmRequired = true; // must release to retrigger
-
-                        if (Serial) {
-                            Serial.println(F("BSOD: triggered by long boop"));
-                        }
-
-                        // Show a funny BSOD message on the OLED HUD
-                        hud.SetOverrideText(
-                            String(F("SNOOT.EXE FAIL")),
-                            String(F("ERR 0X B00P")),
-                            String(F("LET GO TO FIX"))
-                        );
-                        // And display readable text on the panels (14 chars)
-                        bsodText.ClearText();
-                        bsodText.SetText(0, String(F("SNOOT.EXE FAIL")), true);
-                        bsodText.SetText(1, String(F("ERR 0X B00P")), true);
-                        bsodText.SetText(2, String(F("LET GO TO FIX")), true);
-                    }
-                } else {
-                    boopHoldStartMillis = 0;
-                }
-            }
-        }
     }
 
     hud.SetEffect(Menu::GetEffect());// Pull Effect from menu and store reference in hud for observing data
@@ -315,53 +257,8 @@ void ProtogenProject::UpdateFace(float ratio) {
     aRG.SetRotation(ratio * 360.0f * 2.0f);
 
     oSC.SetHueAngle(ratio * 360.0f * 8.0f);
-
-    // If BSOD is active, hard override to solid blue and show text; otherwise normal color flow
-    if (bsodActive) {
-        // Force base to blue
-        materialAnimator.SetBaseMaterial(Material::Replace, &blueMaterial);
-        backgroundMaterial.SetBaseMaterial(Material::Replace, &blueMaterial);
-
-        // Disable all other layers on both face and background, show only BSOD text overlay
-        materialAnimator.AddMaterialFrame(yellowMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(orangeMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(whiteMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(greenMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(purpleMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(redMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(blueMaterial, 1.0f);
-        materialAnimator.AddMaterialFrame(flowNoise, 0.0f);
-        materialAnimator.AddMaterialFrame(rainbowSpiral, 0.0f);
-        materialAnimator.AddMaterialFrame(hRainbow, 0.0f);
-        materialAnimator.AddMaterialFrame(blackMaterial, 0.0f);
-        materialAnimator.AddMaterialFrame(sA, 0.0f);
-        materialAnimator.AddMaterialFrame(aRG, 0.0f);
-        materialAnimator.AddMaterialFrame(oSC, 0.0f);
-        materialAnimator.AddMaterialFrame(bsodText, 1.0f);
-
-        backgroundMaterial.AddMaterialFrame(yellowMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(orangeMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(whiteMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(greenMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(purpleMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(redMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(blueMaterial, 1.0f);
-        backgroundMaterial.AddMaterialFrame(flowNoise, 0.0f);
-        backgroundMaterial.AddMaterialFrame(rainbowSpiral, 0.0f);
-        backgroundMaterial.AddMaterialFrame(hRainbow, 0.0f);
-        backgroundMaterial.AddMaterialFrame(blackMaterial, 0.0f);
-        backgroundMaterial.AddMaterialFrame(sA, 0.0f);
-        backgroundMaterial.AddMaterialFrame(aRG, 0.0f);
-        backgroundMaterial.AddMaterialFrame(oSC, 0.0f);
-        backgroundMaterial.AddMaterialFrame(bsodText, 1.0f);
-    } else {
-        // Restore normal base/materials when not BSOD
-        materialAnimator.SetBaseMaterial(Material::Add, &gradientMat);
-        backgroundMaterial.SetBaseMaterial(Material::Add, Menu::GetMaterial());
-        materialAnimator.AddMaterialFrame(bsodText, 0.0f);
-        backgroundMaterial.AddMaterialFrame(bsodText, 0.0f);
-        SetMaterialColor();
-    }
+    
+    SetMaterialColor();
     RGBColor hueFront = RGBColor(255, 0, 0).HueShift(Menu::GetHueF() * 36);
     RGBColor hueBack  = RGBColor(255, 0, 0).HueShift(Menu::GetHueB() * 36);
 
@@ -800,12 +697,6 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 
     oSC.SetSize(analyzerSize);
     oSC.SetPosition(analyzerPosition);
-
-    // Configure BSOD text overlay to cover the full face area
-    bsodText.SetSize(cameraSize);
-    bsodText.SetPositionOffset(Vector2D(0.0f, 0.0f));
-    bsodText.SetMaterial(&whiteMaterial);
-    bsodText.SetBlinkTime(400);
 
     hud.SetFaceMax(camMax);
     hud.SetFaceMin(camMin);

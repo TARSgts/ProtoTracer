@@ -38,6 +38,30 @@ uint8_t Menu::hueb = 0;
 uint8_t Menu::effect = 0;
 uint8_t Menu::fanSpeed = 0;
 
+#if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+namespace {
+    bool gRemoteConfigured = false;
+
+    void RemoteIncrementValue() {
+        MenuHandler<Menu::GetMenuCount()>::TriggerShortPressAction();
+    }
+
+    void RemoteAdvanceMenu() {
+        MenuHandler<Menu::GetMenuCount()>::TriggerLongPressAction();
+    }
+
+    void EnsureRemoteConfigured() {
+        if (gRemoteConfigured) return;
+
+        IRRemoteReceiver::Initialize(IR_REMOTE_RECEIVER_PIN);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_INCREMENT, RemoteIncrementValue);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_NEXT_MENU, RemoteAdvanceMenu);
+
+        gRemoteConfigured = true;
+    }
+}
+#endif
+
 //                    111111111111222222222222333333333333444444444444555555555555666666666666777777777777888888888888999999999999111111111111222222222222333333333333444444444444
 String Menu::line1 = "               BRIGHT    SDE BRIGHT     MIC      MIC LEVEL      BOOP        SPEC        SIZE       COLOR       HUE F       HUE B       EFFECT    FAN SPEED  ";
 String Menu::line2 = " a b c d e f   12^45       12^45       ON off     123456|8     on OFF      ON off      12^45      123456|8    123456|8    123456|8    123456|8    123456|8  ";
@@ -126,6 +150,9 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
 #ifndef NEOTRELLISMENU
     MenuHandler<menuCount>::Begin();
 #endif
+#if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+    EnsureRemoteConfigured();
+#endif
     isSecondary = false;
 
     effectChange.AddParameter(&effectStrength);
@@ -212,6 +239,9 @@ void Menu::SetCurrentMenu(uint8_t currentMenu) {
 void Menu::Update(float ratio) {
 #if defined NEOTRELLISMENU || defined MORSEBUTTON
     MenuHandler<menuCount>::Update();
+#endif
+#if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+    IRRemoteReceiver::Update();
 #endif
 
     float target = 0.0f;

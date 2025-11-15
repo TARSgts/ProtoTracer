@@ -188,3 +188,25 @@ template <uint8_t menuCount>
 uint8_t MenuHandler<menuCount>::GetCurrentMenu() {
     return currentMenu;
 }
+
+template <uint8_t menuCount>
+void MenuHandler<menuCount>::TriggerShortPressAction() {
+    if (maxValue[currentMenu] == 0) return;
+
+    currentValue[currentMenu] = (currentValue[currentMenu] + 1) % maxValue[currentMenu];
+    if (currentMenu != 0) {
+        WriteEEPROM(currentMenu, currentValue[currentMenu]);
+    }
+
+    lastInteraction = millis();
+}
+
+template <uint8_t menuCount>
+void MenuHandler<menuCount>::TriggerLongPressAction() {
+    WriteEEPROM(currentMenu, currentValue[currentMenu]);
+
+    currentMenu += 1;
+    if (currentMenu >= menuCount) currentMenu = 0;
+
+    lastInteraction = millis();
+}
