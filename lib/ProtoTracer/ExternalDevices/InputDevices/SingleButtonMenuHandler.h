@@ -116,6 +116,15 @@ public:
     static uint8_t GetCurrentMenu();
 
     /**
+     * @brief Sets a menu value from an alternate input source (e.g., IR remote).
+     *
+     * @param menu The menu index to update.
+     * @param value The new value to assign (auto-wrapped to the menu's max range).
+     * @param persist If true, writes the value to EEPROM immediately.
+     */
+    static void SetMenuValue(uint8_t menu, uint8_t value, bool persist = true);
+
+    /**
      * @brief Simulates a short-press release to increment the current menu value.
      */
     static void TriggerShortPressAction();

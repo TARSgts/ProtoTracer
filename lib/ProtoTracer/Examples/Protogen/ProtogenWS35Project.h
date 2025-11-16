@@ -36,23 +36,26 @@ private:
         AddBlinkParameter(pM.GetMorphWeightReference(NukudeFace::Blink));
     }
 
-    void Default(){}
+    void Default(){
+        ApplyMenuOrDefaultColor(Color::CWHITE);
+    }
 
     void Angry(){
         AddParameterFrame(NukudeFace::Anger, 1.0f);
-        AddMaterialFrame(Color::CRED);
+        ApplyMenuOrDefaultColor(Color::CWHITE);
     } 
 
     void Sad(){
         AddParameterFrame(NukudeFace::Sadness, 1.0f);
         AddParameterFrame(NukudeFace::Frown, 1.0f);
-        AddMaterialFrame(Color::CBLUE);
+        ApplyMenuOrDefaultColor(Color::CWHITE);
     }
 
     void Surprised(){
         AddParameterFrame(NukudeFace::Surprised, 1.0f);
         AddParameterFrame(NukudeFace::HideBlush, 0.0f);
         AddMaterialFrame(Color::CRAINBOW);
+        SetStripColorOverride(Color::CRAINBOW);
     }
     
     void Doubt(){
@@ -73,14 +76,17 @@ private:
 
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
     void AudioReactiveGradientCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
     void OscilloscopeCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
 public:
@@ -102,6 +108,7 @@ public:
     void Update(float ratio) override {
         pM.Reset();
 
+        ClearStripColorOverride();
         uint8_t mode = Menu::GetFaceState();//change by button press
         
         controller.SetBrightness(Menu::GetBrightness());

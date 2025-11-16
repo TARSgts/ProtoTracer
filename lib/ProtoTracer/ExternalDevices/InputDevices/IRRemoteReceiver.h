@@ -44,7 +44,7 @@ private:
         Callback callback;
     };
 
-    static constexpr uint8_t kMaxMappings = 6;
+    static constexpr uint8_t kMaxMappings = 16;
 
     static Mapping mappings[kMaxMappings];
     static uint8_t mappingCount;

@@ -503,6 +503,26 @@ protected:
      */
     void AddMaterialFrame(Color color, float opacity = 0.8f);
 
+#ifdef ENABLE_FACE_COLOR_STRIP
+    /**
+     * @brief Signals the face color strip to temporarily use the supplied color.
+     * @param color The desired strip color.
+     */
+    void SetStripColorOverride(Color color);
+
+    /**
+     * @brief Clears any active strip override so the next update reverts to the menu color.
+     */
+    void ClearStripColorOverride();
+#endif
+
+    /**
+     * @brief Applies a fallback color only when no user-selected color is active.
+     * @param color The fallback color to use when Menu::GetFaceColor() is CBASE.
+     * @param opacity The opacity for the fallback color.
+     */
+    void ApplyMenuOrDefaultColor(Color color, float opacity = 0.8f);
+
     /**
      * @brief Adds a new material frame to the face's MaterialAnimator from a Material reference.
      * @param material A reference to the material to add.

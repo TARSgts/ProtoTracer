@@ -32,11 +32,26 @@ uint8_t Menu::micLevel = 0;
 uint8_t Menu::boopSensor = 0;
 uint8_t Menu::spectrumMirror = 0;
 uint8_t Menu::faceSize = 0;
-uint8_t Menu::color = 0;
+uint8_t Menu::color = 4;
 uint8_t Menu::huef = 0;
 uint8_t Menu::hueb = 0;
 uint8_t Menu::effect = 0;
 uint8_t Menu::fanSpeed = 0;
+
+namespace {
+    uint8_t gCachedMenuColor = 4;
+    bool gRemoteColorOverride = false;
+    uint8_t gRemoteColorValue = 4;
+}
+
+#if !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+namespace {
+    bool gMenuValuesReady = false;
+}
+#endif
+
+#if !defined(NEOTRELLISMENU) || defined(NEOTRELLISMENU)
+#endif
 
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
 namespace {
@@ -50,12 +65,27 @@ namespace {
         MenuHandler<Menu::GetMenuCount()>::TriggerLongPressAction();
     }
 
+    template <uint8_t ColorIndex>
+    void RemoteSetColor() {
+        Menu::OverrideFaceColor(ColorIndex);
+    }
+
     void EnsureRemoteConfigured() {
         if (gRemoteConfigured) return;
 
         IRRemoteReceiver::Initialize(IR_REMOTE_RECEIVER_PIN);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_INCREMENT, RemoteIncrementValue);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_NEXT_MENU, RemoteAdvanceMenu);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_0, RemoteSetColor<0>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_1, RemoteSetColor<1>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_2, RemoteSetColor<2>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_3, RemoteSetColor<3>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_4, RemoteSetColor<4>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_5, RemoteSetColor<5>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_6, RemoteSetColor<6>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_7, RemoteSetColor<7>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_8, RemoteSetColor<8>);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_9, RemoteSetColor<9>);
 
         gRemoteConfigured = true;
     }
@@ -114,7 +144,7 @@ void Menu::SetDefaultEntries() {
     MenuHandler<menuCount>::SetDefaultValue(BoopSensor, 1);
     MenuHandler<menuCount>::SetDefaultValue(SpectrumMirror, 1);
     MenuHandler<menuCount>::SetDefaultValue(FaceSize, 7);
-    MenuHandler<menuCount>::SetDefaultValue(Color, 0);
+    MenuHandler<menuCount>::SetDefaultValue(Color, 4);
     MenuHandler<menuCount>::SetDefaultValue(HueF, 0);
     MenuHandler<menuCount>::SetDefaultValue(HueB, 0);
     MenuHandler<menuCount>::SetDefaultValue(EffectS, 0);
@@ -149,6 +179,12 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
 
 #ifndef NEOTRELLISMENU
     MenuHandler<menuCount>::Begin();
+    MenuHandler<menuCount>::SetMenuValue(Color, 4);
+    gCachedMenuColor = MenuHandler<menuCount>::GetMenuValue(Color);
+    gRemoteColorOverride = false;
+#if !defined(MORSEBUTTON)
+    gMenuValuesReady = true;
+#endif
 #endif
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
     EnsureRemoteConfigured();
@@ -181,6 +217,13 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
 #endif
 
     SetMaxEntries();
+
+    gCachedMenuColor = MenuHandler<menuCount>::GetMenuValue(Color);
+    gRemoteColorOverride = false;
+
+#if defined(NEOTRELLISMENU)
+    Menu::SetFaceColor(4);
+#endif
 }
 
 Material* Menu::GetMaterial() {
@@ -243,6 +286,17 @@ void Menu::Update(float ratio) {
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
     IRRemoteReceiver::Update();
 #endif
+
+#if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
+    uint8_t actualColor = color;
+#else
+    uint8_t actualColor = MenuHandler<menuCount>::GetMenuValue(Color);
+#endif
+    if (actualColor != gCachedMenuColor) {
+        gCachedMenuColor = actualColor;
+        gRemoteColorOverride = false;
+        Menu::color = actualColor;
+    }
 
     float target = 0.0f;
     float menuTarget = 0.0f;
@@ -481,12 +535,33 @@ uint8_t Menu::GetFaceSize() {
 }
 
 void Menu::SetFaceColor(uint8_t color) {
+#if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
+    // These handlers manage their own storage; keep local copy for secondary usage.
     Menu::color = color;
+#else
+    gRemoteColorOverride = false;
+    Menu::color = color;
+    if (!isSecondary) {
+        MenuHandler<menuCount>::SetMenuValue(Color, color, false);
+    }
+#endif
 }
 
 uint8_t Menu::GetFaceColor() {
+    if (gRemoteColorOverride) return gRemoteColorValue;
+
     if (isSecondary) return color;
     else return MenuHandler<menuCount>::GetMenuValue(Color);
+}
+
+void Menu::OverrideFaceColor(uint8_t colorValue) {
+    if (colorValue > 11) {
+        colorValue = 11;
+    }
+
+    gRemoteColorOverride = true;
+    gRemoteColorValue = colorValue;
+    Menu::color = colorValue;
 }
 
 void Menu::SetHueF(uint8_t huef) {
@@ -506,6 +581,7 @@ uint8_t Menu::GetHueB() {
     if (isSecondary) return hueb;
     else return MenuHandler<menuCount>::GetMenuValue(HueB);
 }
+
 
 void Menu::SetEffectS(uint8_t effect) {
     Menu::effect = effect;

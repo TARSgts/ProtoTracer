@@ -183,6 +183,16 @@ ProtogenProject::Color ProtogenProject::ConvertMenuColor(uint8_t menuColor) cons
     return static_cast<Color>(menuColor);
 }
 
+void ProtogenProject::SetStripColorOverride(Color color) {
+    pendingStripColor = color;
+    stripColorOverridePending = true;
+}
+
+void ProtogenProject::ClearStripColorOverride() {
+    stripColorOverridePending = false;
+    stripColorInitialized = false;
+}
+
 void ProtogenProject::UpdateFaceColorStrip(float ratio, const RGBColor& hueFront, const RGBColor& hueBack) {
     bool shouldApply = false;
     Color colorSelection = lastAppliedStripColor;
@@ -528,6 +538,12 @@ void ProtogenProject::AddMaterialFrame(Color color, float opacity){
     pendingStripColor = color;
     stripColorOverridePending = true;
 #endif
+}
+
+void ProtogenProject::ApplyMenuOrDefaultColor(Color color, float opacity) {
+    if (Menu::GetFaceColor() == 0) {
+        AddMaterialFrame(color, opacity);
+    }
 }
 
 void ProtogenProject::AddMaterialFrame(Material& material, float opacity){

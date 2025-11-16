@@ -48,24 +48,25 @@ private:
     }
 
     void Default(){
-        AddMaterialFrame(Color::CGREEN);
+        ApplyMenuOrDefaultColor(Color::CWHITE);
     }
 
     void Angry(){
         AddParameterFrame(NukudeFace::Anger, 1.0f);
-        AddMaterialFrame(Color::CRED);
+        ApplyMenuOrDefaultColor(Color::CWHITE);
     } 
 
     void Sad(){
         AddParameterFrame(NukudeFace::Sadness, 1.0f);
         AddParameterFrame(NukudeFace::Frown, 1.0f);
-        AddMaterialFrame(Color::CBLUE);
+        ApplyMenuOrDefaultColor(Color::CWHITE);
     }
 
     void Surprised(){
         AddParameterFrame(NukudeFace::Surprised, 1.0f);
         AddParameterFrame(NukudeFace::HideBlush, 0.0f);
         AddMaterialFrame(Color::CRAINBOW);
+        SetStripColorOverride(Color::CRAINBOW);
     }
     
     void Doubt(){
@@ -86,14 +87,17 @@ private:
 
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
     void AudioReactiveGradientCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
     void OscilloscopeCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
+        SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
 public:
@@ -147,6 +151,7 @@ public:
     }
 
     void SelectFace(uint8_t code) {
+        ClearStripColorOverride();
         if (IsBooped() && code != 6) {
             Surprised();
             return;

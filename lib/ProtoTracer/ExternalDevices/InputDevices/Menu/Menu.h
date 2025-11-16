@@ -461,6 +461,12 @@ public:
     static uint8_t GetFaceColor();
 
     /**
+     * @brief Forces the face color to a specific value until the menu changes it again.
+     * @param color The new color index (0-10).
+     */
+    static void OverrideFaceColor(uint8_t color);
+
+    /**
      * @brief Sets the front hue value if in isSecondary mode.
      * @param huef The new front hue (0-10).
      */

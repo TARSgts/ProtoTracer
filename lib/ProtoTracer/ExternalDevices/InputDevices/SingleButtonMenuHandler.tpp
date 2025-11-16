@@ -190,6 +190,23 @@ uint8_t MenuHandler<menuCount>::GetCurrentMenu() {
 }
 
 template <uint8_t menuCount>
+void MenuHandler<menuCount>::SetMenuValue(uint8_t menu, uint8_t value, bool persist) {
+    if (menu >= menuCount) return;
+
+    if (maxValue[menu] > 0) {
+        value %= maxValue[menu];
+    }
+
+    currentValue[menu] = value;
+
+    if (persist) {
+        WriteEEPROM(menu, value);
+    }
+
+    lastInteraction = millis();
+}
+
+template <uint8_t menuCount>
 void MenuHandler<menuCount>::TriggerShortPressAction() {
     if (maxValue[currentMenu] == 0) return;
 
