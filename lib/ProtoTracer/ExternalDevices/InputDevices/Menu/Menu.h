@@ -269,6 +269,12 @@ public:
     static void SetCurrentMenu(uint8_t currentMenu);
 
     /**
+     * @brief Steps the face selection forward/backward regardless of the active menu.
+     * @param delta Positive advances to the next face, negative steps back.
+     */
+    static void StepFaceState(int8_t delta);
+
+    /**
      * @brief Updates the menu each frame, handling transitions, wiggle effects, and text generation.
      * @param ratio A normalized value typically used in animation loops (0.0f to 1.0f).
      */

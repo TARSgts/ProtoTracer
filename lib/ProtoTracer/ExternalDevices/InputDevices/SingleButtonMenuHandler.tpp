@@ -227,3 +227,20 @@ void MenuHandler<menuCount>::TriggerLongPressAction() {
 
     lastInteraction = millis();
 }
+
+template <uint8_t menuCount>
+void MenuHandler<menuCount>::TriggerShortPressDecrementAction() {
+    if (maxValue[currentMenu] == 0) return;
+
+    if (currentValue[currentMenu] == 0) {
+        currentValue[currentMenu] = maxValue[currentMenu] - 1;
+    } else {
+        --currentValue[currentMenu];
+    }
+
+    if (currentMenu != 0) {
+        WriteEEPROM(currentMenu, currentValue[currentMenu]);
+    }
+
+    lastInteraction = millis();
+}

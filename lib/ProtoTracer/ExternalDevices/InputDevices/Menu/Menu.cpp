@@ -58,11 +58,15 @@ namespace {
     bool gRemoteConfigured = false;
 
     void RemoteIncrementValue() {
-        MenuHandler<Menu::GetMenuCount()>::TriggerShortPressAction();
+        Menu::StepFaceState(1);
     }
 
     void RemoteAdvanceMenu() {
         MenuHandler<Menu::GetMenuCount()>::TriggerLongPressAction();
+    }
+
+    void RemoteDecrementValue() {
+        Menu::StepFaceState(-1);
     }
 
     template <uint8_t ColorIndex>
@@ -76,6 +80,7 @@ namespace {
         IRRemoteReceiver::Initialize(IR_REMOTE_RECEIVER_PIN);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_INCREMENT, RemoteIncrementValue);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_NEXT_MENU, RemoteAdvanceMenu);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_DECREMENT, RemoteDecrementValue);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_0, RemoteSetColor<0>);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_1, RemoteSetColor<1>);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_2, RemoteSetColor<2>);
@@ -277,6 +282,26 @@ uint8_t Menu::GetCurrentMenuValue(){
 
 void Menu::SetCurrentMenu(uint8_t currentMenu) {
     Menu::currentMenu = currentMenu;
+}
+
+void Menu::StepFaceState(int8_t delta) {
+    if (delta == 0) return;
+#if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
+    if (faceCount == 0) return;
+    int value = faceState;
+    value += delta;
+    if (value < 0) value += faceCount;
+    value %= faceCount;
+    faceState = static_cast<uint8_t>(value);
+#else
+    if (faceCount == 0) return;
+    uint8_t currentValue = MenuHandler<menuCount>::GetMenuValue(Faces);
+    int maxFaces = faceCount;
+    int nextValue = static_cast<int>(currentValue) + delta;
+    nextValue %= maxFaces;
+    if (nextValue < 0) nextValue += maxFaces;
+    MenuHandler<menuCount>::SetMenuValue(Faces, static_cast<uint8_t>(nextValue), false);
+#endif
 }
 
 void Menu::Update(float ratio) {

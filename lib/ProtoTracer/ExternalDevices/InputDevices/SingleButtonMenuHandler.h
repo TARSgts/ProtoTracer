@@ -133,6 +133,11 @@ public:
      * @brief Simulates a long-press release to advance to the next menu.
      */
     static void TriggerLongPressAction();
+
+    /**
+     * @brief Simulates a short-press release stepping backwards.
+     */
+    static void TriggerShortPressDecrementAction();
 };
 
 #include "SingleButtonMenuHandler.tpp" // Include the template implementation.
