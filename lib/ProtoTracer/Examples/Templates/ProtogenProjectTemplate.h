@@ -30,6 +30,7 @@
 #include "../../Scene/Materials/Animated/SpectrumAnalyzer.h"
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
+#include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
 
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
 #include "../../Utils/Signals/FunctionGenerator.h"
@@ -153,6 +154,7 @@ private:
     SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), true, true); 
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
+    MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
 
     // --- Project controllers ---
     BlinkTrack<2> blink; ///< Blink track handler.
@@ -200,11 +202,13 @@ private:
     float offsetFaceSA  = 0.0f;  ///< Offset for SpectrumAnalyzer face.
     float offsetFaceARG = 0.0f;  ///< Offset for AudioReactiveGradient face.
     float offsetFaceOSC = 0.0f;  ///< Offset for Oscilloscope face.
+    float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
 
     uint8_t offsetFaceInd    = 50; ///< Index for generic face offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSA  = 51; ///< Index for SpectrumAnalyzer offset in EasyEaseAnimator.
     uint8_t offsetFaceIndARG = 52; ///< Index for AudioReactiveGradient offset in EasyEaseAnimator.
     uint8_t offsetFaceIndOSC = 53; ///< Index for Oscilloscope offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
 
     /**
      * @brief Links internal parameters to the EasyEaseAnimator or other controllers.
@@ -571,6 +575,11 @@ protected:
     void OscilloscopeFace();
 
     /**
+     * @brief Enables the merge sort visualizer face.
+     */
+    void MergeSortFace();
+
+    /**
      * @brief Hides the face by setting its offset parameter.
      */
     void HideFace();
@@ -680,4 +689,9 @@ public:
      * to define custom behavior upon enabling or updating the Oscilloscope face.
      */
     virtual void OscilloscopeCallback() = 0;
+
+    /**
+     * @brief Optional callback when the merge sort face is active.
+     */
+    virtual void MergeSortCallback() {}
 };

@@ -45,6 +45,9 @@ private:
     bool mirrorY = false; ///< Whether to mirror the visualization along the Y-axis.
     bool flipY = false; ///< Whether to flip the visualization along the Y-axis.
     bool bounce = false; ///< Whether to apply bouncing animation to the spectrum.
+    float bassEnvelope = 0.0f; ///< Slow envelope follower for bass energy.
+    float beatPulse = 0.0f; ///< Beat pulse intensity for visual accents.
+    float beatHueOffset = 0.0f; ///< Temporary hue offset applied on beats.
 
     RGBColor rainbowSpectrum[6] = {
         RGBColor(255, 0, 0), 
@@ -57,6 +60,12 @@ private:
 
     GradientMaterial<6> gM = GradientMaterial<6>(rainbowSpectrum, 1.0f, false); ///< Gradient material for coloring the spectrum.
     Material* material; ///< Optional sub-material for additional effects.
+    bool usePeakHoldBlend = false; ///< Blends peak-hold data into display bars when true.
+    float peakHoldBlend = 0.25f; ///< Amount of peak-hold contribution (0-1).
+    uint8_t smoothingRadius = 0; ///< Kernel radius for visual smoothing (0-2). Default keeps single-bin peaks crisp.
+    bool interpolateColumns = false; ///< When false, renders discrete bins without interpolation blur.
+    bool frequencyRemapEnabled = false; ///< Enables non-linear remapping of frequency bins.
+    float frequencyRemapExponent = 1.35f; ///< Exponent used when remapping bins (values > 1 emphasize bass).
 
 public:
     /**
@@ -130,6 +139,36 @@ public:
      * @param hueAngle The hue adjustment angle in degrees.
      */
     void SetHueAngle(float hueAngle);
+
+    /**
+     * @brief Enables blending of peak-hold data into the visible bars.
+     *
+     * @param enable True to blend peak values, false to show live data only.
+     * @param blendRatio Blend ratio (0.0 = live only, 1.0 = hold only).
+     */
+    void EnablePeakHoldBlend(bool enable, float blendRatio = 0.25f);
+
+    /**
+     * @brief Sets the smoothing radius applied when building visual data.
+     *
+     * @param radius Kernel radius (0 = none, 1 = subtle, 2 = legacy wide blur).
+     */
+    void SetSmoothingRadius(uint8_t radius);
+
+    /**
+     * @brief Enables non-linear remapping of bins along the horizontal axis.
+     *
+     * @param enable True to remap bins, false to use native FFT ordering.
+     * @param exponent Curve exponent ( >1 boosts bass, <1 boosts treble ).
+     */
+    void EnableFrequencyRemap(bool enable, float exponent = 1.35f);
+
+    /**
+     * @brief Enables smooth interpolation between bins when sampling final columns.
+     *
+     * @param enable True to interpolate, false to sample discrete bins.
+     */
+    void EnableColumnInterpolation(bool enable);
 
     /**
      * @brief Updates the spectrum visualization with new audio data.

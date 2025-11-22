@@ -14,6 +14,7 @@
 
 class ProtogenHUB75Project : public ProtogenProject {
 private:
+    static constexpr uint8_t kFaceCount = 10;
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
     NukudeFace pM;
@@ -23,7 +24,18 @@ private:
     SolidCube sideIllum;
     // E 001 TARS ----------------------------------------------------------------------
     
-	const __FlashStringHelper* faceArray[10] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3")};
+	const __FlashStringHelper* faceArray[kFaceCount] = {
+        F("DEFAULT"),
+        F("ANGRY"),
+        F("DOUBT"),
+        F("FROWN"),
+        F("LOOKUP"),
+        F("SAD"),
+        F("AUD-GRD"),
+        F("OSCIL"),
+        F("SPECTRUM"),
+        F("MERGESRT")
+    };
 
     void LinkControlParameters() override {//Called from parent
         AddParameter(NukudeFace::Anger, pM.GetMorphWeightReference(NukudeFace::Anger), 15);
@@ -100,8 +112,13 @@ private:
         SetStripColorOverride(Color::CHORIZONTALRAINBOW);
     }
 
+    void MergeSortCallback() override {
+        AddMaterialFrame(Color::CBLUE, 0.6f);
+        SetStripColorOverride(Color::CBLUE);
+    }
+
 public:
-    ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 94.0f), 22, 23, 9, 21){
+    ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 94.0f), 22, 23, kFaceCount, 21){
         scene.AddObject(pM.GetObject());
         scene.AddObject(deltaDisplayBackground.GetObject());
 
@@ -166,6 +183,8 @@ public:
             case 5: Sad();      break;
             case 6: AudioReactiveGradientFace();    break;
             case 7: OscilloscopeFace();             break;
+            case 8: SpectrumAnalyzerFace();         break;
+            case 9: MergeSortFace();                break;
             default: SpectrumAnalyzerFace();        break;
         }
     }
@@ -184,6 +203,7 @@ public:
             case 19: Sad();         break; // [S]ad
             case 21: LookUp();      break; // Look [U]p
             case 22: LookDown();    break; // Look [V] Down
+            case 13: MergeSortFace(); break; // [M] Merge sort
             case 24: AudioReactiveGradientFace();   break; // [X] X.X
             case 25: OscilloscopeFace();            break; // [Y] Oscilloscope
             case 26: SpectrumAnalyzerFace();        break; // [Z] Spectrum

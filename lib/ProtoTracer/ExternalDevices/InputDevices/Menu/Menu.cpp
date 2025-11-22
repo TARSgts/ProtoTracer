@@ -42,16 +42,11 @@ namespace {
     uint8_t gCachedMenuColor = 4;
     bool gRemoteColorOverride = false;
     uint8_t gRemoteColorValue = 4;
-}
-
 #if !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
-namespace {
     bool gMenuValuesReady = false;
+#endif
 }
-#endif
 
-#if !defined(NEOTRELLISMENU) || defined(NEOTRELLISMENU)
-#endif
 
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
 namespace {
@@ -217,6 +212,9 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
     }
 
     isSecondary = false;
+#if defined(NEOTRELLISMENU)
+    gMenuValuesReady = true;
+#endif
 #else
     isSecondary = true;
 #endif
@@ -564,9 +562,9 @@ void Menu::SetFaceColor(uint8_t color) {
     // These handlers manage their own storage; keep local copy for secondary usage.
     Menu::color = color;
 #else
-    gRemoteColorOverride = false;
     Menu::color = color;
-    if (!isSecondary) {
+    gRemoteColorOverride = false;
+    if (!isSecondary && gMenuValuesReady) {
         MenuHandler<menuCount>::SetMenuValue(Color, color, false);
     }
 #endif
@@ -591,6 +589,12 @@ void Menu::OverrideFaceColor(uint8_t colorValue) {
 
 void Menu::SetHueF(uint8_t huef) {
     Menu::huef = huef;
+
+#if !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+    if (!isSecondary && gMenuValuesReady) {
+        MenuHandler<menuCount>::SetMenuValue(HueF, huef, false);
+    }
+#endif
 }
 
 uint8_t Menu::GetHueF() {
@@ -600,6 +604,12 @@ uint8_t Menu::GetHueF() {
 
 void Menu::SetHueB(uint8_t hueb) {
     Menu::hueb = hueb;
+
+#if !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+    if (!isSecondary && gMenuValuesReady) {
+        MenuHandler<menuCount>::SetMenuValue(HueB, hueb, false);
+    }
+#endif
 }
 
 uint8_t Menu::GetHueB() {

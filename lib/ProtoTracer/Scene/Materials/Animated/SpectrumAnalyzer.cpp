@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.h"
+#include <algorithm>
 #include <cmath>
 
 SpectrumAnalyzer::SpectrumAnalyzer(Vector2D size, Vector2D offset, bool bounce, bool flipY, bool mirrorY) {
@@ -54,6 +55,31 @@ void SpectrumAnalyzer::SetHueAngle(float hueAngle) {
     this->hueAngle = hueAngle;
 }
 
+void SpectrumAnalyzer::EnablePeakHoldBlend(bool enable, float blendRatio) {
+    usePeakHoldBlend = enable;
+    if (enable) {
+        peakHoldBlend = Mathematics::Constrain(blendRatio, 0.0f, 1.0f);
+    }
+}
+
+void SpectrumAnalyzer::SetSmoothingRadius(uint8_t radius) {
+    if (radius > 2) radius = 2;
+    smoothingRadius = radius;
+}
+
+void SpectrumAnalyzer::EnableFrequencyRemap(bool enable, float exponent) {
+    frequencyRemapEnabled = enable;
+    if (enable) {
+        if (exponent < 0.2f) exponent = 0.2f;
+        if (exponent > 3.0f) exponent = 3.0f;
+        frequencyRemapExponent = exponent;
+    }
+}
+
+void SpectrumAnalyzer::EnableColumnInterpolation(bool enable) {
+    interpolateColumns = enable;
+}
+
 void SpectrumAnalyzer::Update(float* readData) {
     if (!readData) {
         data = processedData;
@@ -71,9 +97,22 @@ void SpectrumAnalyzer::Update(float* readData) {
 
     float peak = 0.0f;
     float noiseAccumulator = 0.0f;
+    float lowBandEnergy = 0.0f;
 
     for (uint8_t i = 0; i < bins; ++i) {
-        float value = Mathematics::Constrain(readData[i], 0.0f, 1.0f);
+        float value;
+        if (frequencyRemapEnabled) {
+            float normalized = float(i) / float(bins - 1);
+            float curved = powf(normalized, frequencyRemapExponent);
+            float srcIndex = curved * float(bins - 1);
+            uint8_t left = uint8_t(srcIndex);
+            uint8_t right = left < bins - 1 ? left + 1 : left;
+            float frac = srcIndex - float(left);
+            value = Mathematics::CosineInterpolation(readData[left], readData[right], frac);
+        } else {
+            value = Mathematics::Constrain(readData[i], 0.0f, 1.0f);
+        }
+        value = Mathematics::Constrain(value, 0.0f, 1.2f);
         float emphasis = 0.85f + (float(i) / float(bins - 1)) * emphasisSlope;
         if (i < 6) emphasis *= lowBinBoost;
         value = Mathematics::Constrain(value * emphasis, 0.0f, 1.2f);
@@ -94,8 +133,17 @@ void SpectrumAnalyzer::Update(float* readData) {
             if (peakHoldData[i] < 0.001f) peakHoldData[i] = 0.0f;
         }
 
-        processedData[i] = peakHoldData[i];
-        if (processedData[i] > peak) peak = processedData[i];
+        float displayValue = smooth;
+        if (usePeakHoldBlend) {
+            displayValue = smooth * (1.0f - peakHoldBlend) + peakHoldData[i] * peakHoldBlend;
+        }
+
+        processedData[i] = displayValue;
+        if (displayValue > peak) peak = displayValue;
+
+        if (i < 24) {
+            lowBandEnergy += displayValue;
+        }
     }
 
     noiseAccumulator /= float(bins);
@@ -129,10 +177,19 @@ void SpectrumAnalyzer::Update(float* readData) {
             peakHoldTimer[i] = 0;
             peakHoldData[i] *= quietDecay;
             smoothedData[i] *= quietDecay;
-            processedData[i] = peakHoldData[i];
+            float displayValue = usePeakHoldBlend
+                                     ? smoothedData[i] * (1.0f - peakHoldBlend) + peakHoldData[i] * peakHoldBlend
+                                     : smoothedData[i];
+            processedData[i] = displayValue;
         }
         visualReady = false;
     }
+
+    lowBandEnergy = (lowBandEnergy / 24.0f);
+    bassEnvelope = bassEnvelope * 0.88f + lowBandEnergy * 0.12f;
+    float beatDelta = Mathematics::Max(0.0f, lowBandEnergy - bassEnvelope);
+    beatPulse = Mathematics::Constrain(beatPulse * 0.85f + beatDelta * 2.4f, 0.0f, 1.0f);
+    beatHueOffset = beatHueOffset * 0.9f + beatDelta * 60.0f;
 
     const float* source = processedData;
     if (bounce) {
@@ -177,7 +234,8 @@ RGBColor SpectrumAnalyzer::GetRGB(const Vector3D& position, const Vector3D& norm
     if (flipY) yColor = 1.0f - yColor;
 
     if (yColor <= height) {
-        return material->GetRGB(Vector3D(1.0f - height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
+        float dynamicHue = hueAngle + beatHueOffset;
+        return material->GetRGB(Vector3D(1.0f - height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(dynamicHue);
     } else {
         return RGBColor(0, 0, 0);
     }
@@ -189,18 +247,36 @@ void SpectrumAnalyzer::BuildVisualData(const float* source) {
         return;
     }
 
-    constexpr float kernel[5] = {0.08f, 0.2f, 0.44f, 0.2f, 0.08f};
-    constexpr int radius = 2;
-
-    for (uint8_t i = 0; i < bins; ++i) {
-        float sum = 0.0f;
-        for (int k = -radius; k <= radius; ++k) {
-            int idx = int(i) + k;
-            if (idx < 0) idx = 0;
-            if (idx >= bins) idx = bins - 1;
-            sum += source[idx] * kernel[k + radius];
+    if (smoothingRadius == 0) {
+        for (uint8_t i = 0; i < bins; ++i) {
+            visualData[i] = source[i];
         }
-        visualData[i] = sum;
+    } else if (smoothingRadius == 1) {
+        constexpr float kernel[3] = {0.2f, 0.6f, 0.2f};
+        constexpr int radius = 1;
+        for (uint8_t i = 0; i < bins; ++i) {
+            float sum = 0.0f;
+            for (int k = -radius; k <= radius; ++k) {
+                int idx = int(i) + k;
+                if (idx < 0) idx = 0;
+                if (idx >= bins) idx = bins - 1;
+                sum += source[idx] * kernel[k + radius];
+            }
+            visualData[i] = sum;
+        }
+    } else {
+        constexpr float kernel[5] = {0.08f, 0.2f, 0.44f, 0.2f, 0.08f};
+        constexpr int radius = 2;
+        for (uint8_t i = 0; i < bins; ++i) {
+            float sum = 0.0f;
+            for (int k = -radius; k <= radius; ++k) {
+                int idx = int(i) + k;
+                if (idx < 0) idx = 0;
+                if (idx >= bins) idx = bins - 1;
+                sum += source[idx] * kernel[k + radius];
+            }
+            visualData[i] = sum;
+        }
     }
 
     visualReady = true;
@@ -213,6 +289,12 @@ float SpectrumAnalyzer::SampleFrequency(float index) const {
     float maxIndex = float(bins - 1);
     if (index < 0.0f) index = 0.0f;
     if (index > maxIndex) index = maxIndex;
+
+    if (!interpolateColumns) {
+        uint8_t idx = uint8_t(index + 0.5f);
+        if (idx >= bins) idx = bins - 1;
+        return source[idx];
+    }
 
     uint8_t left = uint8_t(index);
     uint8_t right = left < bins - 1 ? left + 1 : left;

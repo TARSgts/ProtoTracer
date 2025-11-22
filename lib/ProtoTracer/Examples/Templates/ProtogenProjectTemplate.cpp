@@ -5,6 +5,7 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceSA, offsetFaceIndSA, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceARG, offsetFaceIndARG, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceOSC, offsetFaceIndOSC, 40, 0.0f, 1.0f);
+    eEA.AddParameter(&offsetFaceSort, offsetFaceIndSort, 40, 0.0f, 1.0f);
 }
 
 void ProtogenProject::SetBaseMaterial(Material* material){
@@ -27,6 +28,7 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &sA, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
+    materialAnimator.AddMaterial(Material::Replace, &mergeSort, 20, 0.0f, 1.0f);
 
     backgroundMaterial.SetBaseMaterial(Material::Add, Menu::GetMaterial());
     backgroundMaterial.AddMaterial(Material::Replace, &yellowMaterial, 40, 0.0f, 1.0f);//layer 1
@@ -43,6 +45,7 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &sA, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &mergeSort, 20, 0.0f, 1.0f);
 }
 
 void ProtogenProject::UpdateKeyFrameTracks(){
@@ -634,6 +637,18 @@ void ProtogenProject::OscilloscopeFace(){
     OscilloscopeCallback();
 }
 
+void ProtogenProject::MergeSortFace(){
+    mergeSort.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndSort, 1.0f);
+
+    materialAnimator.AddMaterialFrame(mergeSort, offsetFaceSort);
+    backgroundMaterial.AddMaterialFrame(mergeSort, offsetFaceSort);
+
+    MergeSortCallback();
+}
+
 void ProtogenProject::HideFace(){
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
 }
@@ -713,6 +728,9 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 
     oSC.SetSize(analyzerSize);
     oSC.SetPosition(analyzerPosition);
+    mergeSort.SetSize(analyzerSize);
+    mergeSort.SetPosition(analyzerPosition);
+    mergeSort.SetColumnRandomRange(12, 28);
 
     hud.SetFaceMax(camMax);
     hud.SetFaceMin(camMin);
