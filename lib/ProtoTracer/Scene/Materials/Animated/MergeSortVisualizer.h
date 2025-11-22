@@ -98,7 +98,10 @@ private:
         BubbleSort,
         InsertionSort,
         SelectionSort,
-        RadixSort
+        RadixSort,
+        ShellSort,
+        HeapSort,
+        QuickSort
     };
 
     enum class RadixPhase : uint8_t {
@@ -108,7 +111,7 @@ private:
         CopyBack
     };
 
-    static constexpr uint8_t kAlgorithmCount = 5;
+    static constexpr uint8_t kAlgorithmCount = 8;
 
     Vector2D size;
     Vector2D offset;
@@ -148,6 +151,29 @@ private:
     uint8_t selectionIndex = 0;
     uint8_t selectionScan = 1;
     uint8_t selectionMinIndex = 0;
+
+    // Shell sort state
+    uint8_t shellGap = 0;
+    uint8_t shellOuter = 0;
+    int16_t shellInner = 0;
+
+    // Heap sort state
+    uint8_t heapSize = 0;
+    int8_t heapBuildIndex = -1;
+    int8_t heapSiftIndex = -1;
+    bool heapBuilding = true;
+
+    // Quick sort state
+    static constexpr uint8_t kQuickStackSize = 32;
+    int16_t quickStackStart[kQuickStackSize];
+    int16_t quickStackEnd[kQuickStackSize];
+    int8_t quickStackTop = -1;
+    bool quickPartitioning = false;
+    int16_t quickPartitionStart = 0;
+    int16_t quickPartitionEnd = 0;
+    int16_t quickStoreIndex = 0;
+    int16_t quickIterator = 0;
+    uint16_t quickPivotKey = 0;
     // Radix sort state
     RadixPhase radixPhase = RadixPhase::Counting;
     uint8_t radixDigit = 0;
@@ -184,9 +210,16 @@ private:
     void AdvanceInsertionSortStep();
     void AdvanceSelectionSortStep();
     void AdvanceRadixSortStep();
+    void AdvanceShellSortStep();
+    void AdvanceHeapSortStep();
+    void AdvanceQuickSortStep();
     void SelectNextAlgorithm();
     uint8_t ClampColumnsToResolution(uint8_t desired) const;
     uint8_t GenerateRandomColumnCount() const;
     void UpdateResolutionLimit();
     void EnterHoldState();
+    void SwapColumns(uint8_t a, uint8_t b);
+    void PushQuickRange(int16_t start, int16_t end);
+    bool PopQuickRange(int16_t& start, int16_t& end);
+    bool SiftDown(uint8_t limit, uint8_t& current);
 };

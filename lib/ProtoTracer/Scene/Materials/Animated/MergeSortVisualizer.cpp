@@ -1,6 +1,7 @@
 #include "MergeSortVisualizer.h"
 
 #include <Arduino.h>
+#include <cmath>
 
 namespace {
 constexpr float kMinPadding = 0.0f;
@@ -113,32 +114,9 @@ void MergeSortVisualizer::ShuffleBars() {
 
     if (columns < 2) return;
 
-    auto swapEntries = [&](uint8_t a, uint8_t b) {
-        float tempValue = values[a];
-        values[a] = values[b];
-        values[b] = tempValue;
-
-        float tempDisplay = displayValues[a];
-        displayValues[a] = displayValues[b];
-        displayValues[b] = tempDisplay;
-
-        float tempScratch = scratch[a];
-        scratch[a] = scratch[b];
-        scratch[b] = tempScratch;
-
-        uint16_t tempKey = valueKeys[a];
-        valueKeys[a] = valueKeys[b];
-        valueKeys[b] = tempKey;
-
-        uint16_t tempScratchKey = scratchKeys[a];
-        scratchKeys[a] = scratchKeys[b];
-        scratchKeys[b] = tempScratchKey;
-    };
-
     for (int16_t i = int16_t(columns) - 1; i > 0; --i) {
         uint8_t j = static_cast<uint8_t>(random(0, i + 1));
-        if (j == i) continue;
-        swapEntries(static_cast<uint8_t>(i), j);
+        SwapColumns(static_cast<uint8_t>(i), j);
     }
 }
 
@@ -199,6 +177,24 @@ void MergeSortVisualizer::PrepareCurrentAlgorithm() {
                 radixOffsets[i] = 0;
             }
             break;
+        case SortAlgorithm::ShellSort:
+            shellGap = columns / 2;
+            shellOuter = shellGap;
+            shellInner = shellOuter;
+            break;
+        case SortAlgorithm::HeapSort:
+            heapSize = columns;
+            heapBuilding = true;
+            heapBuildIndex = heapSize > 0 ? int8_t(heapSize / 2) - 1 : -1;
+            heapSiftIndex = -1;
+            break;
+        case SortAlgorithm::QuickSort:
+            quickStackTop = -1;
+            quickPartitioning = false;
+            if (columns > 1) {
+                PushQuickRange(0, columns - 1);
+            }
+            break;
     }
 
     compareIndexA = compareIndexB = writeIndex = 255;
@@ -231,6 +227,15 @@ void MergeSortVisualizer::AdvanceSortingStep() {
             break;
         case SortAlgorithm::RadixSort:
             AdvanceRadixSortStep();
+            break;
+        case SortAlgorithm::ShellSort:
+            AdvanceShellSortStep();
+            break;
+        case SortAlgorithm::HeapSort:
+            AdvanceHeapSortStep();
+            break;
+        case SortAlgorithm::QuickSort:
+            AdvanceQuickSortStep();
             break;
     }
 }
@@ -320,12 +325,7 @@ void MergeSortVisualizer::AdvanceBubbleSortStep() {
     writeIndex = 255;
 
     if (valueKeys[compareIndexA] > valueKeys[compareIndexB]) {
-        float tmp = values[compareIndexA];
-        values[compareIndexA] = values[compareIndexB];
-        values[compareIndexB] = tmp;
-        uint16_t tmpKey = valueKeys[compareIndexA];
-        valueKeys[compareIndexA] = valueKeys[compareIndexB];
-        valueKeys[compareIndexB] = tmpKey;
+        SwapColumns(compareIndexA, compareIndexB);
         writeIndex = compareIndexB;
         bubbleSwapped = true;
     }
@@ -389,12 +389,7 @@ void MergeSortVisualizer::AdvanceSelectionSortStep() {
         ++selectionScan;
     } else {
         if (selectionMinIndex != selectionIndex) {
-            float tmp = values[selectionIndex];
-            values[selectionIndex] = values[selectionMinIndex];
-            values[selectionMinIndex] = tmp;
-            uint16_t tmpKey = valueKeys[selectionIndex];
-            valueKeys[selectionIndex] = valueKeys[selectionMinIndex];
-            valueKeys[selectionMinIndex] = tmpKey;
+            SwapColumns(selectionIndex, selectionMinIndex);
             writeIndex = selectionIndex;
         } else {
             writeIndex = 255;
@@ -490,6 +485,162 @@ void MergeSortVisualizer::AdvanceRadixSortStep() {
             break;
         }
     }
+}
+
+void MergeSortVisualizer::AdvanceShellSortStep() {
+    if (columns < 2) {
+        EnterHoldState();
+        return;
+    }
+
+    if (shellGap < 1) {
+        EnterHoldState();
+        return;
+    }
+
+    if (shellOuter >= columns) {
+        shellGap /= 2;
+        if (shellGap < 1) {
+            EnterHoldState();
+            return;
+        }
+        shellOuter = shellGap;
+        shellInner = shellOuter;
+    }
+
+    uint8_t currentIndex = shellInner < 0 ? 0 : static_cast<uint8_t>(shellInner);
+    uint8_t compareTarget = (shellInner >= shellGap) ? static_cast<uint8_t>(shellInner - shellGap) : 255;
+    compareIndexA = currentIndex;
+    compareIndexB = compareTarget;
+
+    if (shellInner >= shellGap && valueKeys[currentIndex] < valueKeys[currentIndex - shellGap]) {
+        SwapColumns(currentIndex, currentIndex - shellGap);
+        writeIndex = currentIndex - shellGap;
+        shellInner -= shellGap;
+    } else {
+        writeIndex = 255;
+        ++shellOuter;
+        shellInner = shellOuter;
+    }
+}
+
+void MergeSortVisualizer::AdvanceHeapSortStep() {
+    if (columns < 2) {
+        EnterHoldState();
+        return;
+    }
+
+    if (heapSize <= 1) {
+        EnterHoldState();
+        return;
+    }
+
+    if (heapBuilding) {
+        if (heapBuildIndex < 0) {
+            heapBuilding = false;
+            heapSiftIndex = -1;
+            return;
+        }
+
+        if (heapSiftIndex < 0) {
+            heapSiftIndex = heapBuildIndex;
+        }
+
+        uint8_t current = static_cast<uint8_t>(heapSiftIndex);
+        bool continueSift = SiftDown(heapSize, current);
+        if (continueSift) {
+            heapSiftIndex = current;
+        } else {
+            heapSiftIndex = -1;
+            --heapBuildIndex;
+            if (heapBuildIndex < 0) {
+                heapBuilding = false;
+            }
+        }
+        return;
+    }
+
+    if (heapSize <= 1) {
+        EnterHoldState();
+        return;
+    }
+
+    if (heapSiftIndex < 0) {
+        SwapColumns(0, heapSize - 1);
+        writeIndex = heapSize - 1;
+        --heapSize;
+        heapSiftIndex = 0;
+        if (heapSize <= 1) {
+            heapSiftIndex = -1;
+            EnterHoldState();
+            return;
+        }
+    }
+
+    uint8_t current = static_cast<uint8_t>(heapSiftIndex);
+    bool continueSift = SiftDown(heapSize, current);
+    if (continueSift) {
+        heapSiftIndex = current;
+    } else {
+        heapSiftIndex = -1;
+    }
+}
+
+void MergeSortVisualizer::AdvanceQuickSortStep() {
+    if (columns < 2) {
+        EnterHoldState();
+        return;
+    }
+
+    while (!quickPartitioning) {
+        int16_t start = 0;
+        int16_t end = 0;
+        if (!PopQuickRange(start, end)) {
+            EnterHoldState();
+            return;
+        }
+
+        if (start >= end) {
+            continue;
+        }
+
+        quickPartitionStart = start;
+        quickPartitionEnd = end;
+        quickPivotKey = valueKeys[end];
+        quickStoreIndex = start;
+        quickIterator = start;
+        quickPartitioning = true;
+    }
+
+    if (quickIterator < quickPartitionEnd) {
+        uint8_t current = static_cast<uint8_t>(quickIterator);
+        uint8_t pivotIdx = static_cast<uint8_t>(quickPartitionEnd);
+        compareIndexA = current;
+        compareIndexB = pivotIdx;
+
+        if (valueKeys[current] <= quickPivotKey) {
+            if (quickIterator != quickStoreIndex) {
+                SwapColumns(current, static_cast<uint8_t>(quickStoreIndex));
+                writeIndex = static_cast<uint8_t>(quickStoreIndex);
+            } else {
+                writeIndex = 255;
+            }
+            ++quickStoreIndex;
+        } else {
+            writeIndex = 255;
+        }
+
+        ++quickIterator;
+        return;
+    }
+
+    uint8_t storeIdx = static_cast<uint8_t>(quickStoreIndex);
+    uint8_t pivotIdx = static_cast<uint8_t>(quickPartitionEnd);
+    SwapColumns(storeIdx, pivotIdx);
+    writeIndex = storeIdx;
+    quickPartitioning = false;
+    PushQuickRange(quickPartitionStart, quickStoreIndex - 1);
+    PushQuickRange(quickStoreIndex + 1, quickPartitionEnd);
 }
 
 void MergeSortVisualizer::SmoothDisplayedValues() {
@@ -607,4 +758,71 @@ void MergeSortVisualizer::EnterHoldState() {
     sortingActive = false;
     holdFrames = kHoldDuration;
     compareIndexA = compareIndexB = writeIndex = 255;
+}
+
+void MergeSortVisualizer::SwapColumns(uint8_t a, uint8_t b) {
+    if (a == b || a >= columns || b >= columns) return;
+
+    float tempValue = values[a];
+    values[a] = values[b];
+    values[b] = tempValue;
+
+    float tempDisplay = displayValues[a];
+    displayValues[a] = displayValues[b];
+    displayValues[b] = tempDisplay;
+
+    float tempScratch = scratch[a];
+    scratch[a] = scratch[b];
+    scratch[b] = tempScratch;
+
+    uint16_t tempKey = valueKeys[a];
+    valueKeys[a] = valueKeys[b];
+    valueKeys[b] = tempKey;
+
+    uint16_t tempScratchKey = scratchKeys[a];
+    scratchKeys[a] = scratchKeys[b];
+    scratchKeys[b] = tempScratchKey;
+}
+
+void MergeSortVisualizer::PushQuickRange(int16_t start, int16_t end) {
+    if (start >= end) return;
+    if (quickStackTop >= static_cast<int8_t>(kQuickStackSize) - 1) return;
+    ++quickStackTop;
+    quickStackStart[quickStackTop] = start;
+    quickStackEnd[quickStackTop] = end;
+}
+
+bool MergeSortVisualizer::PopQuickRange(int16_t& start, int16_t& end) {
+    if (quickStackTop < 0) return false;
+    start = quickStackStart[quickStackTop];
+    end = quickStackEnd[quickStackTop];
+    --quickStackTop;
+    return true;
+}
+
+bool MergeSortVisualizer::SiftDown(uint8_t limit, uint8_t& current) {
+    uint8_t left = current * 2 + 1;
+    if (left >= limit) {
+        compareIndexA = current;
+        compareIndexB = 255;
+        writeIndex = 255;
+        return false;
+    }
+
+    uint8_t right = left + 1;
+    uint8_t largest = left;
+    if (right < limit && valueKeys[right] > valueKeys[largest]) largest = right;
+
+    compareIndexA = current;
+    compareIndexB = largest;
+
+    if (valueKeys[current] < valueKeys[largest]) {
+        SwapColumns(current, largest);
+        writeIndex = largest;
+        current = largest;
+        return true;
+    } else {
+        writeIndex = 255;
+        return false;
+    }
 }
