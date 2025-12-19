@@ -99,5 +99,5 @@ public:
      * @param uvw The UVW coordinates for texture mapping.
      * @return An RGBColor object representing the color at the specified point.
      */
-    RGBColor GetRGB(Vector3D intersection, Vector3D normal, Vector3D uvw);
+    RGBColor GetRGB(const Vector3D& intersection, const Vector3D& normal, const Vector3D& uvw) override;
 };

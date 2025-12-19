@@ -31,6 +31,9 @@
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
 #include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
+#ifdef ENABLE_BAD_APPLE_FACE
+#include "../../Assets/Textures/Animated/BadApple.h"
+#endif
 
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
 #include "../../Utils/Signals/FunctionGenerator.h"
@@ -155,6 +158,9 @@ private:
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
     MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
+#ifdef ENABLE_BAD_APPLE_FACE
+    BadAppleSequence badApple = BadAppleSequence(Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
+#endif
 
     // --- Project controllers ---
     BlinkTrack<2> blink; ///< Blink track handler.
@@ -203,12 +209,18 @@ private:
     float offsetFaceARG = 0.0f;  ///< Offset for AudioReactiveGradient face.
     float offsetFaceOSC = 0.0f;  ///< Offset for Oscilloscope face.
     float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
+#ifdef ENABLE_BAD_APPLE_FACE
+    float offsetFaceBadApple = 0.0f; ///< Offset for Bad Apple face.
+#endif
 
     uint8_t offsetFaceInd    = 50; ///< Index for generic face offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSA  = 51; ///< Index for SpectrumAnalyzer offset in EasyEaseAnimator.
     uint8_t offsetFaceIndARG = 52; ///< Index for AudioReactiveGradient offset in EasyEaseAnimator.
     uint8_t offsetFaceIndOSC = 53; ///< Index for Oscilloscope offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
+#ifdef ENABLE_BAD_APPLE_FACE
+    uint8_t offsetFaceIndBadApple = 55; ///< Index for Bad Apple offset in EasyEaseAnimator.
+#endif
 
     /**
      * @brief Links internal parameters to the EasyEaseAnimator or other controllers.
@@ -452,6 +464,14 @@ protected:
     ObjectAlign* GetObjectAlignRear();
 
     /**
+     * @brief Returns the current logical camera size used for face alignment.
+     *
+     * Exposing this allows derived projects to build effects (like custom
+     * overlays) that need to know the available screen real estate.
+     */
+    Vector2D GetCameraSize() const;
+
+    /**
      * @brief Computes the face scaling based on a user-defined face size.
      * @return A float representing the scale factor to apply for the face.
      */
@@ -578,6 +598,13 @@ protected:
      * @brief Enables the merge sort visualizer face.
      */
     void MergeSortFace();
+
+    /**
+     * @brief Enables the Bad Apple animated face.
+     */
+#ifdef ENABLE_BAD_APPLE_FACE
+    void BadAppleFace();
+#endif
 
     /**
      * @brief Hides the face by setting its offset parameter.

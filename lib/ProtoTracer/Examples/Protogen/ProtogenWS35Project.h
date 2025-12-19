@@ -1,18 +1,48 @@
 #pragma once
+#include <cmath>
 
 #include "../Templates/ProtogenProjectTemplate.h"
 #include "../../Assets/Models/FBX/NukudeFlat.h"
+#include "../../Assets/Models/OBJ/DVD.h"
+#include "../../Assets/Models/OBJ/SolidCube.h"
+#include "../../Assets/Models/OBJ/TexturedQuad.h"
+#include "../../Assets/Textures/Static/DVDLogoImage.h"
+#include "../../Scene/Materials/Static/SimpleMaterial.h"
 
 #include "../../Camera/CameraManager/Implementations/WS35SplitCameras.h"
 #include "../../Controller/WS35Controller.h"
 
 class ProtogenWS35Project : public ProtogenProject {
 private:
+    enum class DvdRenderMode { Sprite, Mesh, Cube };
+    // Use the sprite-based render path by default (switch to Cube/Mesh if you need to debug geometry).
+    static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     WS35SplitCameraManager cameras;
     WS35Controller controller = WS35Controller(&cameras, 50);
     NukudeFace pM;
+    DVD dvdLogo; // actual DVD logo mesh that bounces across the screen.
+    SolidCube dvdDebugCube;
+    TexturedQuad dvdQuad;
+    DVD_logo dvdImage = DVD_logo(Vector2D(), Vector2D());
+    SimpleMaterial dvdMaterial = SimpleMaterial(RGBColor(0, 255, 170));
+    Vector2D dvdOffset = Vector2D(); ///< Current logo offset from the center of the face canvas.
+    Vector2D dvdVelocity = Vector2D(65.0f, 55.0f); ///< Pixels per second-ish speed along X/Y for the screensaver motion.
+    uint32_t lastDvdUpdateMs = 0; ///< Tracks the last time we advanced the DVD logo (for frame-rate independent motion).
+    const float dvdEdgeMargin = 0.0f; ///< No bezel so the square can sweep the entire face.
+    const float dvdScale = 0.35f; ///< Relative size of the square after alignment (1.0 fills the canvas).
+    const float dvdAlignMargin = 0.0f; ///< No additional margin during alignment.
+    const float dvdCornerTolerance = 12.0f; ///< Distance from both edges required before triggering confetti.
+    Vector2D dvdTravelPadding = Vector2D(); ///< Optional padding (per axis) to keep the logo away from the bounds.
+    Vector2D dvdCustomTravelMin = Vector2D(); ///< Optional explicit minimum travel limit for fine calibration.
+    Vector2D dvdCustomTravelMax = Vector2D(); ///< Optional explicit maximum travel limit for fine calibration.
+    bool dvdUseCustomTravelBounds = false; ///< Tracks whether manual travel limits are active.
+    bool dvdConfettiEnabled = true; ///< Toggle to enable/disable the celebratory confetti burst on collisions.
     
-	const __FlashStringHelper* faceArray[10] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3")};
+    #ifdef ENABLE_BAD_APPLE_FACE
+	const __FlashStringHelper* faceArray[11] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("BADAPPLE")};
+    #else
+	const __FlashStringHelper* faceArray[10] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO")};
+    #endif
 
     void LinkControlParameters() override {
         AddParameter(NukudeFace::Anger, pM.GetMorphWeightReference(NukudeFace::Anger), 15);
@@ -74,6 +104,241 @@ private:
         AddParameterFrame(NukudeFace::LookDown, 1.0f);
     }
 
+    /**
+     * @brief Resets the bouncing DVD logo to the center with a fresh timer.
+     *
+     * We call this once during construction so the first frame does not jump.
+     */
+    void ResetDvdMotion() {
+        dvdOffset = Vector2D();
+        float baseSpeed = GetCameraSize().X * 0.35f; // Scale motion to panel width so it feels similar on different canvases.
+        dvdVelocity = Vector2D(baseSpeed * 0.6f, baseSpeed * 0.48f);
+        lastDvdUpdateMs = millis();
+    }
+
+    /**
+     * @brief Steps the palette forward so every wall hit noticeably changes the logo color.
+     */
+    RGBColor GetMenuDrivenColor() const {
+        uint8_t selection = Menu::GetFaceColor();
+        switch (selection) {
+            case Color::CYELLOW: return RGBColor(255, 255, 0);
+            case Color::CORANGE: return RGBColor(255, 165, 0);
+            case Color::CWHITE:  return RGBColor(255, 255, 255);
+            case Color::CGREEN:  return RGBColor(0, 255, 0);
+            case Color::CPURPLE: return RGBColor(255, 0, 255);
+            case Color::CRED:    return RGBColor(255, 0, 0);
+            case Color::CBLUE:   return RGBColor(0, 0, 255);
+            case Color::CBLACK:  return RGBColor(0, 0, 0);
+            case Color::CRAINBOW:
+            case Color::CRAINBOWNOISE:
+            case Color::CHORIZONTALRAINBOW: {
+                float hue = fmodf(millis() * 0.06f, 360.0f);
+                return RGBColor(255, 0, 0).HueShift(hue);
+            }
+            case Color::CBASE:
+            default: {
+                float hue = Menu::GetHueF() * 36.0f;
+                return RGBColor(255, 0, 0).HueShift(hue);
+            }
+        }
+    }
+
+    void AdvanceDvdColor() {
+        RGBColor color = GetMenuDrivenColor();
+        if (kDvdRenderMode == DvdRenderMode::Sprite) {
+            dvdImage.SetTintColor(color);
+        } else {
+            dvdMaterial.SetRGB(color);
+        }
+    }
+
+    void TriggerDvdConfetti() {
+        if (!dvdConfettiEnabled) return;
+        AddMaterialFrame(Color::CRAINBOWNOISE, 0.8f);
+        AddBackgroundMaterialFrame(Color::CRAINBOWNOISE, 0.5f);
+        SetStripColorOverride(Color::CRAINBOW);
+    }
+
+    void SetDVDConfettiEnabled(bool enabled) {
+        dvdConfettiEnabled = enabled;
+    }
+
+    bool IsDVDConfettiEnabled() const {
+        return dvdConfettiEnabled;
+    }
+
+    Object3D* GetDvdObject() {
+        switch (kDvdRenderMode) {
+            case DvdRenderMode::Sprite:
+                return dvdQuad.GetObject();
+            case DvdRenderMode::Cube:
+                return dvdDebugCube.GetObject();
+            case DvdRenderMode::Mesh:
+            default:
+                return dvdLogo.GetObject();
+        }
+    }
+
+    Material* GetDvdMaterial() {
+        return (kDvdRenderMode == DvdRenderMode::Sprite) ? static_cast<Material*>(&dvdImage)
+                                                        : static_cast<Material*>(&dvdMaterial);
+    }
+
+    float RGBToHue(const RGBColor& color) const {
+        float r = color.R / 255.0f;
+        float g = color.G / 255.0f;
+        float b = color.B / 255.0f;
+        float maxC = Mathematics::Max(r, Mathematics::Max(g, b));
+        float minC = Mathematics::Min(r, Mathematics::Min(g, b));
+        float delta = maxC - minC;
+        if (delta == 0.0f) {
+            return 0.0f;
+        }
+        float hue;
+        if (maxC == r) {
+            hue = 60.0f * fmodf(((g - b) / delta), 6.0f);
+        } else if (maxC == g) {
+            hue = 60.0f * (((b - r) / delta) + 2.0f);
+        } else {
+            hue = 60.0f * (((r - g) / delta) + 4.0f);
+        }
+        if (hue < 0.0f) {
+            hue += 360.0f;
+        }
+        return hue;
+    }
+
+    /**
+     * @brief Allows tuning how close to the edges the DVD face may travel.
+     *
+     * @param padding Amount of padding (in face pixels) to add on each axis.
+     */
+    void SetDVDTravelPadding(Vector2D padding) {
+        dvdTravelPadding = padding;
+    }
+
+    /**
+     * @brief Allows explicitly defining the minimum/maximum offsets the logo may visit.
+     *
+     * Supplying manual bounds is helpful when the physical screen is slightly shifted
+     * relative to the modeled canvas (or when a bezel crops a portion of the render).
+     */
+    void SetDVDTravelBounds(Vector2D minBounds, Vector2D maxBounds) {
+        // Ensure minBounds <= maxBounds on each axis so the bounce logic stays sane.
+        float minX = (minBounds.X <= maxBounds.X) ? minBounds.X : maxBounds.X;
+        float maxX = (maxBounds.X >= minBounds.X) ? maxBounds.X : minBounds.X;
+        float minY = (minBounds.Y <= maxBounds.Y) ? minBounds.Y : maxBounds.Y;
+        float maxY = (maxBounds.Y >= minBounds.Y) ? maxBounds.Y : minBounds.Y;
+        dvdCustomTravelMin = Vector2D(minX, minY);
+        dvdCustomTravelMax = Vector2D(maxX, maxY);
+        dvdUseCustomTravelBounds = true;
+    }
+
+    /**
+     * @brief Returns control back to the automatically sized bounds.
+     */
+    void ClearDVDTravelBounds() {
+        dvdUseCustomTravelBounds = false;
+    }
+
+    /**
+     * @brief Renders the bouncing DVD logo face.
+     *
+     * - Integrates a simple velocity/position pair so the logo travels at a constant speed.
+     * - Bounces off virtual walls sized to the current camera, nudging the position back inside.
+     * - Flips color on every bounce for an old-school screensaver vibe.
+     * - Aligns, scales, and translates the DVD mesh on top of the existing face canvas.
+     */
+    void DVDLogoFace(float ratio) {
+        GetDvdObject()->Enable();
+        pM.GetObject()->Disable();
+        (void)ratio; // Motion is driven by elapsed millis(), not the normalized animation ratio.
+        AdvanceDvdColor();
+
+        uint32_t now = millis();
+        float deltaTime = (lastDvdUpdateMs == 0) ? 0.016f : (now - lastDvdUpdateMs) / 1000.0f;
+        lastDvdUpdateMs = now;
+
+        dvdOffset = dvdOffset + dvdVelocity * deltaTime;
+
+        GetDvdObject()->ResetVertices();
+        AlignObjectFace(GetDvdObject(), 0.0f, dvdAlignMargin, false);
+
+        Vector3D canvasSize = GetDvdObject()->GetSize();
+        Vector2D canvasHalf(canvasSize.X * 0.5f, canvasSize.Y * 0.5f);
+        Vector2D objHalf(canvasSize.X * dvdScale * 0.5f, canvasSize.Y * dvdScale * 0.5f);
+        if (kDvdRenderMode == DvdRenderMode::Sprite) {
+            Vector2D scaledSize(canvasSize.X * dvdScale, canvasSize.Y * dvdScale);
+            dvdImage.SetSize(scaledSize);
+        }
+
+        Vector2D edge = canvasHalf - objHalf - (Vector2D(dvdEdgeMargin, dvdEdgeMargin) + dvdTravelPadding);
+        if (edge.X < 0.0f) edge.X = 0.0f;
+        if (edge.Y < 0.0f) edge.Y = 0.0f;
+        Vector2D minEdge(-edge.X, -edge.Y);
+        Vector2D maxEdge(edge.X, edge.Y);
+
+        if (dvdUseCustomTravelBounds) {
+            minEdge = dvdCustomTravelMin;
+            maxEdge = dvdCustomTravelMax;
+        }
+
+        bool bounced = false;
+
+        if (dvdOffset.X > maxEdge.X) {
+            dvdOffset.X = maxEdge.X;
+            dvdVelocity.X = -fabs(dvdVelocity.X);
+            bounced = true;
+        } else if (dvdOffset.X < minEdge.X) {
+            dvdOffset.X = minEdge.X;
+            dvdVelocity.X = fabs(dvdVelocity.X);
+            bounced = true;
+        }
+
+        if (dvdOffset.Y > maxEdge.Y) {
+            dvdOffset.Y = maxEdge.Y;
+            dvdVelocity.Y = -fabs(dvdVelocity.Y);
+            bounced = true;
+        } else if (dvdOffset.Y < minEdge.Y) {
+            dvdOffset.Y = minEdge.Y;
+            dvdVelocity.Y = fabs(dvdVelocity.Y);
+            bounced = true;
+        }
+
+        if (bounced) {
+            auto nearEdge = [&](float value, float minVal, float maxVal) {
+                return (fabsf(value - minVal) <= dvdCornerTolerance) || (fabsf(value - maxVal) <= dvdCornerTolerance);
+            };
+            if (nearEdge(dvdOffset.X, minEdge.X, maxEdge.X) && nearEdge(dvdOffset.Y, minEdge.Y, maxEdge.Y)) {
+                TriggerDvdConfetti();
+            }
+        }
+
+        auto* logoTransform = GetDvdObject()->GetTransform();
+        Vector3D centerOffset = GetDvdObject()->GetCenterOffset();
+
+        logoTransform->SetScale(Vector3D(1.0f, 1.0f, 1.0f));
+        logoTransform->SetScaleOffset(Vector3D());
+        logoTransform->SetRotation(Vector3D());
+        logoTransform->SetRotationOffset(Vector3D());
+        logoTransform->SetPosition(Vector3D());
+
+        logoTransform->SetScale(Vector3D(dvdScale, dvdScale, 1.0f));
+        logoTransform->SetScaleOffset(centerOffset);
+        logoTransform->SetRotationOffset(centerOffset);
+        logoTransform->SetPosition(Vector3D(dvdOffset.X, dvdOffset.Y, 0.0f));
+        GetDvdObject()->UpdateTransform();
+
+        if (kDvdRenderMode == DvdRenderMode::Sprite) {
+            Vector3D worldCenter = GetDvdObject()->GetCenterOffset();
+            dvdImage.SetPosition(Vector2D(worldCenter.X, worldCenter.Y));
+        }
+
+        // Keep menu-driven color selection respected on the strip while the logo is active.
+        ApplyMenuOrDefaultColor(Color::CWHITE, 0.9f);
+    }
+
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
         SetStripColorOverride(Color::CHORIZONTALRAINBOW);
@@ -90,10 +355,22 @@ private:
     }
 
 public:
-    ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 1, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23, 9){
+    ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
+        #ifdef ENABLE_BAD_APPLE_FACE
+        11
+        #else
+        10
+        #endif
+    ){
         scene.AddObject(pM.GetObject());
+        scene.AddObject(GetDvdObject()); // add early so we can toggle it on/off per face selection
 
         pM.GetObject()->SetMaterial(GetFaceMaterial());
+        GetDvdObject()->SetMaterial(GetDvdMaterial());
+        AdvanceDvdColor();
+        SetDVDConfettiEnabled(true);
+        GetDvdObject()->Disable(); // hidden until the DVD face is selected
+        ResetDvdMotion();
 
         LinkControlParameters();
 
@@ -107,6 +384,8 @@ public:
 
     void Update(float ratio) override {
         pM.Reset();
+        GetDvdObject()->Disable();
+        pM.GetObject()->Enable();
 
         ClearStripColorOverride();
         uint8_t mode = Menu::GetFaceState();//change by button press
@@ -114,7 +393,7 @@ public:
         controller.SetBrightness(Menu::GetBrightness());
         controller.SetAccentBrightness(Menu::GetAccentBrightness());
 
-        if (IsBooped() && mode != 6){
+        if (IsBooped() && mode != 6 && mode != 9){
             Surprised();
         }
         else{
@@ -130,21 +409,31 @@ public:
             else if (mode == 7){
                 OscilloscopeFace();
             }
-            else {
+            else if (mode == 8) {
                 SpectrumAnalyzerFace();
-            } 
+            }
+            else if (mode == 9) {
+                DVDLogoFace(ratio);
+            }
+            #ifdef ENABLE_BAD_APPLE_FACE
+            else {
+                BadAppleFace();
+            }
+            #endif 
         }
 
         UpdateFace(ratio);
 
-        pM.SetMorphWeight(NukudeFace::BiggerNose, 1.0f);
-        pM.SetMorphWeight(NukudeFace::MoveEye, 1.0f);
+        if (pM.GetObject()->IsEnabled()) {
+            pM.SetMorphWeight(NukudeFace::BiggerNose, 1.0f);
+            pM.SetMorphWeight(NukudeFace::MoveEye, 1.0f);
 
-        pM.Update();
+            pM.Update();
 
-        AlignObjectFace(pM.GetObject(), -7.5f);
+            AlignObjectFace(pM.GetObject(), -7.5f);
 
-        pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
-        pM.GetObject()->UpdateTransform();
+            pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
+            pM.GetObject()->UpdateTransform();
+        }
     }
 };

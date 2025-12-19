@@ -6,6 +6,9 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceARG, offsetFaceIndARG, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceOSC, offsetFaceIndOSC, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceSort, offsetFaceIndSort, 40, 0.0f, 1.0f);
+#ifdef ENABLE_BAD_APPLE_FACE
+    eEA.AddParameter(&offsetFaceBadApple, offsetFaceIndBadApple, 40, 0.0f, 1.0f);
+#endif
 }
 
 void ProtogenProject::SetBaseMaterial(Material* material){
@@ -29,6 +32,9 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &mergeSort, 20, 0.0f, 1.0f);
+#ifdef ENABLE_BAD_APPLE_FACE
+    materialAnimator.AddMaterial(Material::Replace, &badApple, 20, 0.0f, 1.0f);
+#endif
 
     backgroundMaterial.SetBaseMaterial(Material::Add, Menu::GetMaterial());
     backgroundMaterial.AddMaterial(Material::Replace, &yellowMaterial, 40, 0.0f, 1.0f);//layer 1
@@ -46,6 +52,9 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &mergeSort, 20, 0.0f, 1.0f);
+#ifdef ENABLE_BAD_APPLE_FACE
+    backgroundMaterial.AddMaterial(Material::Add, &badApple, 20, 0.0f, 1.0f);
+#endif
 }
 
 void ProtogenProject::UpdateKeyFrameTracks(){
@@ -458,6 +467,10 @@ ObjectAlign* ProtogenProject::GetObjectAlignRear(){
     return &objARear;
 }
 
+Vector2D ProtogenProject::GetCameraSize() const {
+    return cameraSize;
+}
+
 float ProtogenProject::GetFaceScale(){
     uint8_t faceSize = Menu::GetFaceSize();
 
@@ -649,6 +662,18 @@ void ProtogenProject::MergeSortFace(){
     MergeSortCallback();
 }
 
+#ifdef ENABLE_BAD_APPLE_FACE
+void ProtogenProject::BadAppleFace(){
+    badApple.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndBadApple, 1.0f);
+
+    materialAnimator.AddMaterialFrame(badApple, offsetFaceBadApple);
+    backgroundMaterial.AddMaterialFrame(badApple, offsetFaceBadApple);
+}
+#endif
+
 void ProtogenProject::HideFace(){
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
 }
@@ -731,6 +756,10 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
     mergeSort.SetSize(analyzerSize);
     mergeSort.SetPosition(analyzerPosition);
     mergeSort.SetColumnRandomRange(12, 28);
+#ifdef ENABLE_BAD_APPLE_FACE
+    badApple.SetSize(cameraSize);
+    badApple.SetPosition(cameraSize.Divide(2.0f));
+#endif
 
     hud.SetFaceMax(camMax);
     hud.SetFaceMin(camMin);

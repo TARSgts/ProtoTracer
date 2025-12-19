@@ -31,6 +31,8 @@ public:
     const uint8_t* data; ///< Pointer to the image data.
     const uint8_t* rgbColors; ///< Pointer to the color palette.
     uint8_t colors; ///< The number of colors in the palette.
+    RGBColor tintColor = RGBColor(255, 255, 255); ///< Optional color tint applied to the sampled pixels.
+    bool tintEnabled = false; ///< Tracks whether tinting is active.
 
     /**
      * @brief Constructs an `Image` material.
@@ -89,6 +91,21 @@ public:
      * @param hueAngle The new hue adjustment angle in degrees.
      */
     void SetHueAngle(float hueAngle);
+
+    /**
+     * @brief Applies a multiplicative RGB tint to the sampled pixels.
+     *
+     * The tint scales each sampled pixel by the provided color, allowing for easy recoloring
+     * without modifying the underlying palette.
+     *
+     * @param color Tint color to apply (use white to effectively disable tinting).
+     */
+    void SetTintColor(const RGBColor& color);
+
+    /**
+     * @brief Disables the tint effect so pixels render with their original palette values.
+     */
+    void DisableTint();
 
     /**
      * @brief Calculates the RGB color at a specific position.

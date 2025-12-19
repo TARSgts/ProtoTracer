@@ -42,6 +42,6 @@ void ImageSequence::Update() {
     image->SetData(data[currentFrame]);
 }
 
-RGBColor ImageSequence::GetRGB(Vector3D intersection, Vector3D normal, Vector3D uvw) {
+RGBColor ImageSequence::GetRGB(const Vector3D& intersection, const Vector3D& normal, const Vector3D& uvw) {
     return image->GetRGB(intersection, normal, uvw);
 }

@@ -32,6 +32,15 @@ void Image::SetHueAngle(float hueAngle) {
     this->hueAngle = hueAngle;
 }
 
+void Image::SetTintColor(const RGBColor& color) {
+    tintColor = color;
+    tintEnabled = true;
+}
+
+void Image::DisableTint() {
+    tintEnabled = false;
+}
+
 RGBColor Image::GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) {
     Vector2D rPos = angle != 0.0f ? Vector2D(position.X, position.Y).Rotate(angle, offset) - offset : Vector2D(position.X, position.Y) - offset;
 
@@ -44,5 +53,13 @@ RGBColor Image::GetRGB(const Vector3D& position, const Vector3D& normal, const V
 
     if (pos > colors - (unsigned int)1) return RGBColor();
 
-    return RGBColor(rgbColors[pos], rgbColors[pos + 1], rgbColors[pos + 2]).HueShift(hueAngle);
+    RGBColor sample(rgbColors[pos], rgbColors[pos + 1], rgbColors[pos + 2]);
+
+    if (tintEnabled) {
+        sample.R = static_cast<uint8_t>((static_cast<uint16_t>(sample.R) * tintColor.R) / 255);
+        sample.G = static_cast<uint8_t>((static_cast<uint16_t>(sample.G) * tintColor.G) / 255);
+        sample.B = static_cast<uint8_t>((static_cast<uint16_t>(sample.B) * tintColor.B) / 255);
+    }
+
+    return sample.HueShift(hueAngle);
 }
