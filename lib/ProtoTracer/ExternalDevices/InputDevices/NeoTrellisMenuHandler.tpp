@@ -39,6 +39,7 @@ TrellisCallback MenuHandler<menuCount>::blink(keyEvent evt) {
         if (evt.bit.NUM < 8) {  // Set face on the current page
             currentMenu = 0;
             currentValue[0] = evt.bit.NUM + 8 * faceChoices;
+            WriteEEPROM(0, currentValue[0]);
         } else if (evt.bit.NUM >= 8 && evt.bit.NUM < 12) {  // Set face page
             currentMenu = 0;
             faceChoices = evt.bit.NUM - 8;
@@ -49,23 +50,24 @@ TrellisCallback MenuHandler<menuCount>::blink(keyEvent evt) {
                 currentSetting = currentSetting == 0 ? 1 : currentSetting;
                 currentMenu = currentSetting;
             } else {
-                WriteEEPROM(currentMenu, currentValue[currentSetting]);
+                WriteEEPROM(currentSetting, currentValue[currentSetting]);
 
                 currentMenu = 0;
             }
         } else if (evt.bit.NUM == 13) {  // Change current menu forward
-            WriteEEPROM(currentMenu, currentValue[currentSetting]);
+            WriteEEPROM(currentSetting, currentValue[currentSetting]);
 
             currentSetting = currentSetting + 1 > menuCount ? menuCount : currentSetting + 1;
             currentMenu = currentSetting;
         } else if (evt.bit.NUM == 14) {  // Change current menu backward
-            WriteEEPROM(currentMenu, currentValue[currentSetting]);
+            WriteEEPROM(currentSetting, currentValue[currentSetting]);
 
             currentSetting = currentSetting - 1 == 0 ? 1 : currentSetting - 1;
             currentMenu = currentSetting;
         } else if (evt.bit.NUM == 15) {
             currentValue[currentSetting] += 1;
             if (currentValue[currentSetting] >= maxValue[currentSetting]) currentValue[currentSetting] = 0;
+            WriteEEPROM(currentSetting, currentValue[currentSetting]);
         }
     } else if (evt.bit.EDGE == SEESAW_KEYPAD_EDGE_FALLING) {
         trellis.pixels.setPixelColor(evt.bit.NUM, 0);

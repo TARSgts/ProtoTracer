@@ -37,6 +37,15 @@ private:
     Vector2D dvdCustomTravelMax = Vector2D(); ///< Optional explicit maximum travel limit for fine calibration.
     bool dvdUseCustomTravelBounds = false; ///< Tracks whether manual travel limits are active.
     bool dvdConfettiEnabled = true; ///< Toggle to enable/disable the celebratory confetti burst on collisions.
+    const RGBColor dvdBouncePalette[6] = {
+        RGBColor(0, 255, 170),
+        RGBColor(255, 105, 180),
+        RGBColor(135, 206, 235),
+        RGBColor(255, 215, 0),
+        RGBColor(255, 64, 64),
+        RGBColor(180, 160, 255)
+    };
+    uint8_t dvdBouncePaletteIndex = 0;
     
     #ifdef ENABLE_BAD_APPLE_FACE
 	const __FlashStringHelper* faceArray[11] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("BADAPPLE")};
@@ -119,33 +128,9 @@ private:
     /**
      * @brief Steps the palette forward so every wall hit noticeably changes the logo color.
      */
-    RGBColor GetMenuDrivenColor() const {
-        uint8_t selection = Menu::GetFaceColor();
-        switch (selection) {
-            case Color::CYELLOW: return RGBColor(255, 255, 0);
-            case Color::CORANGE: return RGBColor(255, 165, 0);
-            case Color::CWHITE:  return RGBColor(255, 255, 255);
-            case Color::CGREEN:  return RGBColor(0, 255, 0);
-            case Color::CPURPLE: return RGBColor(255, 0, 255);
-            case Color::CRED:    return RGBColor(255, 0, 0);
-            case Color::CBLUE:   return RGBColor(0, 0, 255);
-            case Color::CBLACK:  return RGBColor(0, 0, 0);
-            case Color::CRAINBOW:
-            case Color::CRAINBOWNOISE:
-            case Color::CHORIZONTALRAINBOW: {
-                float hue = fmodf(millis() * 0.06f, 360.0f);
-                return RGBColor(255, 0, 0).HueShift(hue);
-            }
-            case Color::CBASE:
-            default: {
-                float hue = Menu::GetHueF() * 36.0f;
-                return RGBColor(255, 0, 0).HueShift(hue);
-            }
-        }
-    }
-
     void AdvanceDvdColor() {
-        RGBColor color = GetMenuDrivenColor();
+        dvdBouncePaletteIndex = (dvdBouncePaletteIndex + 1) % (sizeof(dvdBouncePalette) / sizeof(dvdBouncePalette[0]));
+        RGBColor color = dvdBouncePalette[dvdBouncePaletteIndex];
         if (kDvdRenderMode == DvdRenderMode::Sprite) {
             dvdImage.SetTintColor(color);
         } else {
@@ -254,7 +239,6 @@ private:
         GetDvdObject()->Enable();
         pM.GetObject()->Disable();
         (void)ratio; // Motion is driven by elapsed millis(), not the normalized animation ratio.
-        AdvanceDvdColor();
 
         uint32_t now = millis();
         float deltaTime = (lastDvdUpdateMs == 0) ? 0.016f : (now - lastDvdUpdateMs) / 1000.0f;
@@ -313,6 +297,7 @@ private:
             if (nearEdge(dvdOffset.X, minEdge.X, maxEdge.X) && nearEdge(dvdOffset.Y, minEdge.Y, maxEdge.Y)) {
                 TriggerDvdConfetti();
             }
+            AdvanceDvdColor();
         }
 
         auto* logoTransform = GetDvdObject()->GetTransform();

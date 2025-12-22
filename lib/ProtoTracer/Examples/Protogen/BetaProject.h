@@ -173,9 +173,11 @@ private:
     void Heart(){
         DisableBlinking();
         AddParameterFrame(BetaFront::HeartEye, 1.0f);
-        AddParameterFrame(BetaFront::HideEyeBrow, 1.0f);
+        AddParameterFrame(BetaFront::BlushEye, 1.0f);
+        AddParameterFrame(BetaFront::HideBlush, 0.0f);
+        AddParameterFrame(BetaFront::HideEyeBrow, 0.0f);
         AddParameterFrame(BetaFront::OwOMouth, 1.0f);
-        AddParameterFrame(BetaFront::HideSecondEye, 1.0f);
+        AddParameterFrame(BetaFront::HideSecondEye, 0.0f);
 
         AddMaterialFrame(Color::CRAINBOW, 0.8f);
     }
@@ -373,7 +375,7 @@ public:
         }
 
         switch(code) {
-            case 0: Default();      break;
+            case 0: Heart();        break;
             case 1: Sad();          break;
             case 2: Heart();        break;
             case 3: Dead();         break;

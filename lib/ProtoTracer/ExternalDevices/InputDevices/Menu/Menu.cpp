@@ -179,8 +179,8 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
 
 #ifndef NEOTRELLISMENU
     MenuHandler<menuCount>::Begin();
-    MenuHandler<menuCount>::SetMenuValue(Color, 4);
     gCachedMenuColor = MenuHandler<menuCount>::GetMenuValue(Color);
+    Menu::color = gCachedMenuColor;
     gRemoteColorOverride = false;
 #if !defined(MORSEBUTTON)
     gMenuValuesReady = true;
@@ -221,12 +221,13 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
 
     SetMaxEntries();
 
-    gCachedMenuColor = MenuHandler<menuCount>::GetMenuValue(Color);
+    if (!isSecondary) {
+        gCachedMenuColor = MenuHandler<menuCount>::GetMenuValue(Color);
+    } else {
+        gCachedMenuColor = Menu::color;
+    }
+    Menu::color = gCachedMenuColor;
     gRemoteColorOverride = false;
-
-#if defined(NEOTRELLISMENU)
-    Menu::SetFaceColor(4);
-#endif
 }
 
 Material* Menu::GetMaterial() {
@@ -298,7 +299,7 @@ void Menu::StepFaceState(int8_t delta) {
     int nextValue = static_cast<int>(currentValue) + delta;
     nextValue %= maxFaces;
     if (nextValue < 0) nextValue += maxFaces;
-    MenuHandler<menuCount>::SetMenuValue(Faces, static_cast<uint8_t>(nextValue), false);
+    MenuHandler<menuCount>::SetMenuValue(Faces, static_cast<uint8_t>(nextValue));
 #endif
 }
 
@@ -310,11 +311,7 @@ void Menu::Update(float ratio) {
     IRRemoteReceiver::Update();
 #endif
 
-#if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
-    uint8_t actualColor = color;
-#else
-    uint8_t actualColor = MenuHandler<menuCount>::GetMenuValue(Color);
-#endif
+    uint8_t actualColor = isSecondary ? color : MenuHandler<menuCount>::GetMenuValue(Color);
     if (actualColor != gCachedMenuColor) {
         gCachedMenuColor = actualColor;
         gRemoteColorOverride = false;
@@ -486,7 +483,20 @@ void Menu::GenerateText() {
 }
 
 void Menu::SetFaceState(uint8_t faceState) {
+    if (faceCount == 0) return;
+    faceState %= faceCount;
+#if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
     Menu::faceState = faceState;
+#else
+    if (isSecondary || !gMenuValuesReady) {
+        Menu::faceState = faceState;
+        return;
+    }
+
+    if (MenuHandler<menuCount>::GetMenuValue(Faces) != faceState) {
+        MenuHandler<menuCount>::SetMenuValue(Faces, faceState);
+    }
+#endif
 }
 
 uint8_t Menu::GetFaceState() {
@@ -559,13 +569,13 @@ uint8_t Menu::GetFaceSize() {
 
 void Menu::SetFaceColor(uint8_t color) {
 #if defined(NEOTRELLISMENU) || defined(MORSEBUTTON)
-    // These handlers manage their own storage; keep local copy for secondary usage.
     Menu::color = color;
 #else
+    bool changed = (Menu::color != color) || gRemoteColorOverride;
     Menu::color = color;
     gRemoteColorOverride = false;
-    if (!isSecondary && gMenuValuesReady) {
-        MenuHandler<menuCount>::SetMenuValue(Color, color, false);
+    if (!isSecondary && gMenuValuesReady && changed) {
+        MenuHandler<menuCount>::SetMenuValue(Color, color);
     }
 #endif
 }
@@ -585,6 +595,11 @@ void Menu::OverrideFaceColor(uint8_t colorValue) {
     gRemoteColorOverride = true;
     gRemoteColorValue = colorValue;
     Menu::color = colorValue;
+#if !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
+    if (!isSecondary && gMenuValuesReady) {
+        MenuHandler<menuCount>::SetMenuValue(Color, colorValue);
+    }
+#endif
 }
 
 void Menu::SetHueF(uint8_t huef) {

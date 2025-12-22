@@ -787,8 +787,6 @@ void ProtogenProject::Initialize() {
     Menu::Initialize(faceCount, faceCycleButtonPin, buttonPin, 500);//7 is number of faces
 #endif
 
-    Menu::SetFaceState(0);
     Menu::SetCurrentMenu(0);
 }
-
 
