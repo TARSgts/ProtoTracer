@@ -49,9 +49,9 @@ RGBColor Image::GetRGB(const Vector3D& position, const Vector3D& normal, const V
 
     if (x <= 1 || x >= xPixels || y <= 1 || y >= yPixels) return RGBColor();
 
-    unsigned int pos = data[x + y * xPixels] * 3;
-
-    if (pos > colors - (unsigned int)1) return RGBColor();
+    uint8_t colorIndex = data[x + y * xPixels];
+    if (colorIndex >= colors) return RGBColor();
+    unsigned int pos = static_cast<unsigned int>(colorIndex) * 3;
 
     RGBColor sample(rgbColors[pos], rgbColors[pos + 1], rgbColors[pos + 2]);
 

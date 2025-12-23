@@ -7,6 +7,7 @@
 #include "../../Assets/Models/OBJ/DVD.h"
 #include "../../Assets/Models/OBJ/SolidCube.h"
 #include "../../Assets/Models/OBJ/TexturedQuad.h"
+#include "../../Assets/Models/OBJ/BSOD_3.h"
 #include "../../Assets/Textures/Static/DVDLogoImage.h"
 #include "../../Scene/Materials/Static/SimpleMaterial.h"
 
@@ -40,6 +41,8 @@ private:
     TexturedQuad dvdQuad; ///< Flat quad used when rendering the sprite-based DVD image.
     DVD_logo dvdImage = DVD_logo(Vector2D(), Vector2D()); ///< Sprite that emulates the printed DVD logo.
     SimpleMaterial dvdMaterial = SimpleMaterial(RGBColor(0, 255, 170));
+    TexturedQuad bsodQuad; ///< Quad used for the BSOD static image.
+    BSOD_3 bsodImage = BSOD_3(Vector2D(), Vector2D()); ///< Static BSOD image material.
     Vector2D dvdOffset = Vector2D(); ///< Logo offset relative to the face center.
     Vector2D dvdVelocity = Vector2D(65.0f, 55.0f); ///< Motion vector (units per second) that drives the screensaver bounce.
     uint32_t lastDvdUpdateMs = 0; ///< Timestamp of the previous update for delta-time integration.
@@ -346,6 +349,21 @@ private:
         ApplyMenuOrDefaultColor(Color::CWHITE, 0.9f);
     }
 
+    void BSOD3Face() {
+        bsodQuad.GetObject()->Enable();
+        pM.GetObject()->Disable();
+        GetDvdObject()->Disable();
+
+        bsodQuad.GetObject()->ResetVertices();
+        AlignObjectFace(bsodQuad.GetObject(), 0.0f, 0.0f, false);
+
+        Vector3D canvasSize = bsodQuad.GetObject()->GetSize();
+        bsodImage.SetSize(Vector2D(canvasSize.X, canvasSize.Y));
+
+        Vector3D worldCenter = bsodQuad.GetObject()->GetCenterOffset();
+        bsodImage.SetPosition(Vector2D(worldCenter.X, worldCenter.Y));
+    }
+
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
         SetStripColorOverride(Color::CHORIZONTALRAINBOW);
@@ -371,6 +389,7 @@ public:
         scene.AddObject(pM.GetObject());
         scene.AddObject(deltaDisplayBackground.GetObject());
         scene.AddObject(GetDvdObject());
+        scene.AddObject(bsodQuad.GetObject());
 
         // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
         const float sideIllum_Scale = 0.65;
@@ -383,9 +402,11 @@ public:
         pM.GetObject()->SetMaterial(GetFaceMaterial());
         deltaDisplayBackground.GetObject()->SetMaterial(GetFaceMaterial());
         GetDvdObject()->SetMaterial(GetDvdMaterial());
+        bsodQuad.GetObject()->SetMaterial(&bsodImage);
         AdvanceDvdColor();
         SetDVDConfettiEnabled(true);
         GetDvdObject()->Disable(); // hidden until the DVD face is selected
+        bsodQuad.GetObject()->Disable(); // hidden until the BSOD face is selected
         ResetDvdMotion();
 
         hud.SetFaceArray(faceArray);
@@ -401,6 +422,7 @@ public:
     void Update(float ratio) override {
         pM.Reset();
         GetDvdObject()->Disable();
+        bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
 
         uint8_t mode = Menu::GetFaceState();//change by button press
@@ -409,9 +431,17 @@ public:
         controller.SetAccentBrightness(Menu::GetAccentBrightness());
 
 #ifdef MORSEBUTTON
-        SelectFaceFromMorse(mode);
+        if (IsBoopBSODActive()) {
+            BSOD3Face();
+        } else {
+            SelectFaceFromMorse(mode);
+        }
 #else
-        SelectFace(mode);
+        if (IsBoopBSODActive()) {
+            BSOD3Face();
+        } else {
+            SelectFace(mode);
+        }
 #endif
 
         UpdateFace(ratio);

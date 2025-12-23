@@ -6,6 +6,7 @@
 #include "../../Assets/Models/OBJ/DVD.h"
 #include "../../Assets/Models/OBJ/SolidCube.h"
 #include "../../Assets/Models/OBJ/TexturedQuad.h"
+#include "../../Assets/Models/OBJ/BSOD_3.h"
 #include "../../Assets/Textures/Static/DVDLogoImage.h"
 #include "../../Scene/Materials/Static/SimpleMaterial.h"
 
@@ -25,6 +26,8 @@ private:
     TexturedQuad dvdQuad;
     DVD_logo dvdImage = DVD_logo(Vector2D(), Vector2D());
     SimpleMaterial dvdMaterial = SimpleMaterial(RGBColor(0, 255, 170));
+    TexturedQuad bsodQuad;
+    BSOD_3 bsodImage = BSOD_3(Vector2D(), Vector2D());
     Vector2D dvdOffset = Vector2D(); ///< Current logo offset from the center of the face canvas.
     Vector2D dvdVelocity = Vector2D(65.0f, 55.0f); ///< Pixels per second-ish speed along X/Y for the screensaver motion.
     uint32_t lastDvdUpdateMs = 0; ///< Tracks the last time we advanced the DVD logo (for frame-rate independent motion).
@@ -324,6 +327,21 @@ private:
         ApplyMenuOrDefaultColor(Color::CWHITE, 0.9f);
     }
 
+    void BSOD3Face() {
+        bsodQuad.GetObject()->Enable();
+        pM.GetObject()->Disable();
+        GetDvdObject()->Disable();
+
+        bsodQuad.GetObject()->ResetVertices();
+        AlignObjectFace(bsodQuad.GetObject(), 0.0f, 0.0f, false);
+
+        Vector3D canvasSize = bsodQuad.GetObject()->GetSize();
+        bsodImage.SetSize(Vector2D(canvasSize.X, canvasSize.Y));
+
+        Vector3D worldCenter = bsodQuad.GetObject()->GetCenterOffset();
+        bsodImage.SetPosition(Vector2D(worldCenter.X, worldCenter.Y));
+    }
+
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
         SetStripColorOverride(Color::CHORIZONTALRAINBOW);
@@ -349,12 +367,15 @@ public:
     ){
         scene.AddObject(pM.GetObject());
         scene.AddObject(GetDvdObject()); // add early so we can toggle it on/off per face selection
+        scene.AddObject(bsodQuad.GetObject());
 
         pM.GetObject()->SetMaterial(GetFaceMaterial());
         GetDvdObject()->SetMaterial(GetDvdMaterial());
+        bsodQuad.GetObject()->SetMaterial(&bsodImage);
         AdvanceDvdColor();
         SetDVDConfettiEnabled(true);
         GetDvdObject()->Disable(); // hidden until the DVD face is selected
+        bsodQuad.GetObject()->Disable(); // hidden until the BSOD face is selected
         ResetDvdMotion();
 
         LinkControlParameters();
@@ -370,6 +391,7 @@ public:
     void Update(float ratio) override {
         pM.Reset();
         GetDvdObject()->Disable();
+        bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
 
         ClearStripColorOverride();
@@ -382,29 +404,33 @@ public:
             Surprised();
         }
         else{
-            if (mode == 0) Default();
-            else if (mode == 1) Angry();
-            else if (mode == 2) Doubt();
-            else if (mode == 3) Frown();
-            else if (mode == 4) LookUp();
-            else if (mode == 5) Sad();
-            else if (mode == 6) {
-                AudioReactiveGradientFace();
+            if (IsBoopBSODActive()) {
+                BSOD3Face();
+            } else {
+                if (mode == 0) Default();
+                else if (mode == 1) Angry();
+                else if (mode == 2) Doubt();
+                else if (mode == 3) Frown();
+                else if (mode == 4) LookUp();
+                else if (mode == 5) Sad();
+                else if (mode == 6) {
+                    AudioReactiveGradientFace();
+                }
+                else if (mode == 7){
+                    OscilloscopeFace();
+                }
+                else if (mode == 8) {
+                    SpectrumAnalyzerFace();
+                }
+                else if (mode == 9) {
+                    DVDLogoFace(ratio);
+                }
+                #ifdef ENABLE_BAD_APPLE_FACE
+                else {
+                    BadAppleFace();
+                }
+                #endif 
             }
-            else if (mode == 7){
-                OscilloscopeFace();
-            }
-            else if (mode == 8) {
-                SpectrumAnalyzerFace();
-            }
-            else if (mode == 9) {
-                DVDLogoFace(ratio);
-            }
-            #ifdef ENABLE_BAD_APPLE_FACE
-            else {
-                BadAppleFace();
-            }
-            #endif 
         }
 
         UpdateFace(ratio);

@@ -170,3 +170,27 @@
 #ifndef FACE_COLOR_STRIP_BRIGHTNESS
 #define FACE_COLOR_STRIP_BRIGHTNESS 128
 #endif
+
+/**
+ * @def TTP223_PIN
+ * @brief Digital input pin for the TTP223 touch sensor.
+ */
+#ifndef TTP223_PIN
+#define TTP223_PIN 16
+#endif
+
+/**
+ * @def TTP223_PIN_MODE
+ * @brief Pin mode for the TTP223 input (INPUT, INPUT_PULLUP, INPUT_PULLDOWN).
+ */
+#ifndef TTP223_PIN_MODE
+#define TTP223_PIN_MODE INPUT
+#endif
+
+/**
+ * @def TTP223_ACTIVE_HIGH
+ * @brief Set to 1 if the TTP223 outputs HIGH when touched, 0 if LOW.
+ */
+#ifndef TTP223_ACTIVE_HIGH
+#define TTP223_ACTIVE_HIGH 1
+#endif

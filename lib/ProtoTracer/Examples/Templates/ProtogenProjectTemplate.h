@@ -101,6 +101,10 @@ private:
      * @brief Flag to indicate if the APDS9960 sensor has detected a "boop".
      */
     bool isBooped = false;
+    bool boopHoldActive = false;
+    bool boopHoldTriggered = false;
+    uint32_t boopHoldStartMs = 0;
+    uint32_t boopHoldLatchUntilMs = 0;
 
     /**
      * @brief Flag to indicate if the blink parameter has been set.
@@ -626,6 +630,12 @@ protected:
      * @return True if booped, false otherwise.
      */
     bool IsBooped();
+
+    /**
+     * @brief Returns true when the boop sensor has been held for at least seconds.
+     */
+    bool IsBoopHeldFor(float seconds) const;
+    bool IsBoopBSODActive() const;
 
     /**
      * @brief Computes and returns a Vector3D offset for a "wiggle" effect using function generators.

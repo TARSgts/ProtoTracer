@@ -244,7 +244,7 @@ void ProtogenProject::UpdateFace(float ratio) {
         isBooped = boop.isBooped();
 
         static bool lastTTPState = false;
-        const bool ttpActive = digitalRead(16) == HIGH;
+        const bool ttpActive = digitalRead(TTP223_PIN) == (TTP223_ACTIVE_HIGH ? HIGH : LOW);
 
         if (ttpActive != lastTTPState) {
             lastTTPState = ttpActive;
@@ -258,6 +258,26 @@ void ProtogenProject::UpdateFace(float ratio) {
         if (ttpActive) {
             isBooped = true;
         }
+    }
+
+    uint32_t now = millis();
+    if (isBooped) {
+        if (!boopHoldActive) {
+            boopHoldActive = true;
+            boopHoldTriggered = false;
+            boopHoldStartMs = now;
+        }
+        if (!boopHoldTriggered) {
+            float heldSeconds = (now - boopHoldStartMs) / 1000.0f;
+            if (heldSeconds >= 7.5f) {
+                boopHoldTriggered = true;
+                boopHoldLatchUntilMs = now + 6000;
+            }
+        }
+    } else {
+        boopHoldActive = false;
+        boopHoldTriggered = false;
+        boopHoldStartMs = 0;
     }
 
     hud.SetEffect(Menu::GetEffect());// Pull Effect from menu and store reference in hud for observing data
@@ -692,6 +712,19 @@ bool ProtogenProject::IsBooped(){
     return isBooped;
 }
 
+bool ProtogenProject::IsBoopHeldFor(float seconds) const{
+    if (!boopHoldActive) return false;
+    uint32_t now = millis();
+    float heldSeconds = (now - boopHoldStartMs) / 1000.0f;
+    return heldSeconds >= seconds;
+}
+
+bool ProtogenProject::IsBoopBSODActive() const{
+    if (boopHoldLatchUntilMs == 0) return false;
+    uint32_t now = millis();
+    return now < boopHoldLatchUntilMs;
+}
+
 Vector3D ProtogenProject::GetWiggleOffset(){
     return Vector3D(fGenMatXMove.Update(), fGenMatYMove.Update(), 0);
 }
@@ -770,7 +803,7 @@ void ProtogenProject::Initialize() {
 
     boop.Initialize(5);
 
-    pinMode(16, INPUT);
+    pinMode(TTP223_PIN, TTP223_PIN_MODE);
 
     hud.Initialize();
 
@@ -789,4 +822,3 @@ void ProtogenProject::Initialize() {
 
     Menu::SetCurrentMenu(0);
 }
-
