@@ -31,8 +31,16 @@
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
 #include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
+#include "../../Scene/Materials/Animated/Pong.h"
+#include "../../Scene/Materials/Animated/SpaceInvaders.h"
 #ifdef ENABLE_BAD_APPLE_FACE
-#include "../../Assets/Textures/Animated/BadApple.h"
+#ifdef BAD_APPLE_SD_STREAM
+#include "../../Assets/Textures/Animated/BapleFullSD.h"
+#elif defined(BAD_APPLE_BW_64X32)
+#include "../../Assets/Textures/Animated/BadAppleBW64x32.h"
+#else
+#include "../../Assets/Textures/Animated/BapleFull.h"
+#endif
 #endif
 
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
@@ -162,8 +170,16 @@ private:
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
     MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
+    PongFace pong = PongFace(Vector2D(200, 100), Vector2D(0, 0));
+    SpaceInvadersMaterial spaceInvaders = SpaceInvadersMaterial(Vector2D(200, 100), Vector2D(0, 0));
 #ifdef ENABLE_BAD_APPLE_FACE
+    #ifdef BAD_APPLE_SD_STREAM
+    BapleFullSequenceSD badApple = BapleFullSequenceSD("/BAPLE.BIN", Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
+    #elif defined(BAD_APPLE_BW_64X32)
     BadAppleSequence badApple = BadAppleSequence(Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
+    #else
+    BapleFullSequence badApple = BapleFullSequence(Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
+    #endif
 #endif
 
     // --- Project controllers ---
@@ -185,7 +201,7 @@ private:
     /**
      * @brief Fan controller for controlling a fan's PWM.
      */
-    FanController fanController = FanController(15);
+    FanController fanController = FanController(FAN_PWM_PIN);
 #ifdef ENABLE_FACE_COLOR_STRIP
     FaceColorStrip faceColorStrip = FaceColorStrip(FACE_COLOR_STRIP_PIN, FACE_COLOR_STRIP_LENGTH, FACE_COLOR_STRIP_BRIGHTNESS);
     Color pendingStripColor = CBASE;
@@ -213,8 +229,11 @@ private:
     float offsetFaceARG = 0.0f;  ///< Offset for AudioReactiveGradient face.
     float offsetFaceOSC = 0.0f;  ///< Offset for Oscilloscope face.
     float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
+    float offsetFacePong = 0.0f; ///< Offset for Pong face.
+    float offsetFaceInvaders = 0.0f; ///< Offset for Space Invaders face.
 #ifdef ENABLE_BAD_APPLE_FACE
     float offsetFaceBadApple = 0.0f; ///< Offset for Bad Apple face.
+    bool badAppleUsedThisFrame = false;
 #endif
 
     uint8_t offsetFaceInd    = 50; ///< Index for generic face offset in EasyEaseAnimator.
@@ -222,6 +241,8 @@ private:
     uint8_t offsetFaceIndARG = 52; ///< Index for AudioReactiveGradient offset in EasyEaseAnimator.
     uint8_t offsetFaceIndOSC = 53; ///< Index for Oscilloscope offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndPong = 56; ///< Index for Pong offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndInvaders = 57; ///< Index for Space Invaders offset in EasyEaseAnimator.
 #ifdef ENABLE_BAD_APPLE_FACE
     uint8_t offsetFaceIndBadApple = 55; ///< Index for Bad Apple offset in EasyEaseAnimator.
 #endif
@@ -283,6 +304,10 @@ protected:
      * @param ratio A normalized ratio (0.0f to 1.0f) often used in animation phases.
      */
     void UpdateFace(float ratio);
+#ifdef ENABLE_BAD_APPLE_FACE
+    void ResetBadAppleUsage();
+    void ApplyBadAppleUsage();
+#endif
 #ifdef ENABLE_FACE_COLOR_STRIP
     void UpdateFaceColorStrip(float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
     void ApplyFaceStripColor(Color color, float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
@@ -584,6 +609,14 @@ protected:
     void AddBackgroundMaterialFrame(Material& material, float opacity = 1.0f);
 
     /**
+     * @brief Enables/disables the Bad Apple material so it only accesses SD when active.
+     * @param active True to enable streaming, false to pause and render black.
+     */
+#ifdef ENABLE_BAD_APPLE_FACE
+    void SetBadAppleActive(bool active);
+#endif
+
+    /**
      * @brief Enables the Spectrum Analyzer on the face, updating offsets and calling callbacks.
      */
     void SpectrumAnalyzerFace();
@@ -602,6 +635,16 @@ protected:
      * @brief Enables the merge sort visualizer face.
      */
     void MergeSortFace();
+
+    /**
+     * @brief Enables the Pong auto-play face.
+     */
+    void PongAutoFace();
+
+    /**
+     * @brief Enables the Space Invaders auto-play face.
+     */
+    void SpaceInvadersAutoFace();
 
     /**
      * @brief Enables the Bad Apple animated face.

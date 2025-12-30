@@ -6,6 +6,8 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceARG, offsetFaceIndARG, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceOSC, offsetFaceIndOSC, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceSort, offsetFaceIndSort, 40, 0.0f, 1.0f);
+    eEA.AddParameter(&offsetFacePong, offsetFaceIndPong, 40, 0.0f, 1.0f);
+    eEA.AddParameter(&offsetFaceInvaders, offsetFaceIndInvaders, 40, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     eEA.AddParameter(&offsetFaceBadApple, offsetFaceIndBadApple, 40, 0.0f, 1.0f);
 #endif
@@ -32,6 +34,8 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &mergeSort, 20, 0.0f, 1.0f);
+    materialAnimator.AddMaterial(Material::Replace, &pong, 20, 0.0f, 1.0f);
+    materialAnimator.AddMaterial(Material::Replace, &spaceInvaders, 20, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     materialAnimator.AddMaterial(Material::Replace, &badApple, 20, 0.0f, 1.0f);
 #endif
@@ -52,6 +56,8 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &mergeSort, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &pong, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &spaceInvaders, 20, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     backgroundMaterial.AddMaterial(Material::Add, &badApple, 20, 0.0f, 1.0f);
 #endif
@@ -235,7 +241,10 @@ void ProtogenProject::UpdateFace(float ratio) {
 
     Menu::Update(ratio);
 
-    fanController.SetPWM(Menu::GetFanSpeed() * 25);
+    uint8_t fanMenuValue = Menu::GetFanSpeed();
+    if (fanMenuValue > 9) fanMenuValue = 9;
+    uint8_t fanPwm = static_cast<uint8_t>((static_cast<uint16_t>(fanMenuValue) * 255 + 4) / 9);
+    fanController.SetPWM(fanPwm);
     
     xOffset = fGenMatXMove.Update();
     yOffset = fGenMatYMove.Update();
@@ -335,6 +344,10 @@ void ProtogenProject::UpdateFace(float ratio) {
     aRG.SetPosition(Vector2D(xMaxCamera / 2.0f + xOffset * 4.0f, cameraSize.Y / 2.0f + yOffset * 4.0f));
 
     objA.SetCameraMax(Vector2D(xMaxCamera, cameraSize.Y - cameraSize.Y * offsetFace).Multiply(scale));
+
+#ifdef ENABLE_BAD_APPLE_FACE
+    ApplyBadAppleUsage();
+#endif
 }
 
 
@@ -634,6 +647,20 @@ void ProtogenProject::AddBackgroundMaterialFrame(Material& material, float opaci
     backgroundMaterial.AddMaterialFrame(material, opacity);
 }
 
+#ifdef ENABLE_BAD_APPLE_FACE
+void ProtogenProject::SetBadAppleActive(bool active) {
+    badApple.SetActive(active);
+}
+
+void ProtogenProject::ResetBadAppleUsage() {
+    badAppleUsedThisFrame = false;
+}
+
+void ProtogenProject::ApplyBadAppleUsage() {
+    SetBadAppleActive(badAppleUsedThisFrame);
+}
+#endif
+
 void ProtogenProject::SpectrumAnalyzerFace(){
     sA.Update(MicrophoneFourier::GetWaveform());
 
@@ -682,8 +709,30 @@ void ProtogenProject::MergeSortFace(){
     MergeSortCallback();
 }
 
+void ProtogenProject::PongAutoFace(){
+    pong.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndPong, 1.0f);
+
+    materialAnimator.AddMaterialFrame(pong, offsetFacePong);
+    backgroundMaterial.AddMaterialFrame(pong, offsetFacePong);
+}
+
+void ProtogenProject::SpaceInvadersAutoFace(){
+    spaceInvaders.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndInvaders, 1.0f);
+
+    materialAnimator.AddMaterialFrame(spaceInvaders, offsetFaceInvaders);
+    backgroundMaterial.AddMaterialFrame(spaceInvaders, offsetFaceInvaders);
+}
+
 #ifdef ENABLE_BAD_APPLE_FACE
 void ProtogenProject::BadAppleFace(){
+    badAppleUsedThisFrame = true;
+    SetBadAppleActive(true);
     badApple.Update();
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
@@ -789,6 +838,10 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
     mergeSort.SetSize(analyzerSize);
     mergeSort.SetPosition(analyzerPosition);
     mergeSort.SetColumnRandomRange(12, 28);
+    pong.SetSize(analyzerSize);
+    pong.SetPosition(analyzerPosition);
+    spaceInvaders.SetSize(analyzerSize);
+    spaceInvaders.SetPosition(analyzerPosition);
 #ifdef ENABLE_BAD_APPLE_FACE
     badApple.SetSize(cameraSize);
     badApple.SetPosition(cameraSize.Divide(2.0f));

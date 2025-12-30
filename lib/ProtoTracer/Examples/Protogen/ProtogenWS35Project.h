@@ -51,9 +51,9 @@ private:
     uint8_t dvdBouncePaletteIndex = 0;
     
     #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[11] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("BADAPPLE")};
+	const __FlashStringHelper* faceArray[13] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("BADAPPLE")};
     #else
-	const __FlashStringHelper* faceArray[10] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO")};
+	const __FlashStringHelper* faceArray[12] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER")};
     #endif
 
     void LinkControlParameters() override {
@@ -360,9 +360,9 @@ private:
 public:
     ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
         #ifdef ENABLE_BAD_APPLE_FACE
-        11
+        13
         #else
-        10
+        12
         #endif
     ){
         scene.AddObject(pM.GetObject());
@@ -393,6 +393,9 @@ public:
         GetDvdObject()->Disable();
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
+#ifdef ENABLE_BAD_APPLE_FACE
+        ResetBadAppleUsage();
+#endif
 
         ClearStripColorOverride();
         uint8_t mode = Menu::GetFaceState();//change by button press
@@ -424,6 +427,12 @@ public:
                 }
                 else if (mode == 9) {
                     DVDLogoFace(ratio);
+                }
+                else if (mode == 10) {
+                    PongAutoFace();
+                }
+                else if (mode == 11) {
+                    SpaceInvadersAutoFace();
                 }
                 #ifdef ENABLE_BAD_APPLE_FACE
                 else {

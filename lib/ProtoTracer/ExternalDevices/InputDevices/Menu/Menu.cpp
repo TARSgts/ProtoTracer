@@ -64,6 +64,22 @@ namespace {
         Menu::StepFaceState(-1);
     }
 
+    void RemoteFanIncrement() {
+        uint8_t value = Menu::GetFanSpeed();
+        if (value < 9) {
+            ++value;
+        }
+        MenuHandler<Menu::GetMenuCount()>::SetMenuValue(Menu::FanSpeed, value);
+    }
+
+    void RemoteFanDecrement() {
+        uint8_t value = Menu::GetFanSpeed();
+        if (value > 0) {
+            --value;
+        }
+        MenuHandler<Menu::GetMenuCount()>::SetMenuValue(Menu::FanSpeed, value);
+    }
+
     template <uint8_t ColorIndex>
     void RemoteSetColor() {
         Menu::OverrideFaceColor(ColorIndex);
@@ -76,6 +92,8 @@ namespace {
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_INCREMENT, RemoteIncrementValue);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_NEXT_MENU, RemoteAdvanceMenu);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_DECREMENT, RemoteDecrementValue);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_FAN_INCREMENT, RemoteFanIncrement);
+        IRRemoteReceiver::RegisterCode(IR_REMOTE_CODE_FAN_DECREMENT, RemoteFanDecrement);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_0, RemoteSetColor<0>);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_1, RemoteSetColor<1>);
         IRRemoteReceiver::RegisterCode(IR_REMOTE_COLOR_CODE_2, RemoteSetColor<2>);
@@ -148,7 +166,7 @@ void Menu::SetDefaultEntries() {
     MenuHandler<menuCount>::SetDefaultValue(HueF, 0);
     MenuHandler<menuCount>::SetDefaultValue(HueB, 0);
     MenuHandler<menuCount>::SetDefaultValue(EffectS, 0);
-    MenuHandler<menuCount>::SetDefaultValue(FanSpeed, 0);
+    MenuHandler<menuCount>::SetDefaultValue(FanSpeed, FAN_DEFAULT_MENU_VALUE);
 
     MenuHandler<menuCount>::SetInitialized();
 }
@@ -184,6 +202,9 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
     gRemoteColorOverride = false;
 #if !defined(MORSEBUTTON)
     gMenuValuesReady = true;
+#endif
+#if defined(FAN_IGNORE_EEPROM)
+    MenuHandler<menuCount>::SetMenuValue(FanSpeed, FAN_DEFAULT_MENU_VALUE, false);
 #endif
 #endif
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
@@ -228,6 +249,11 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
     }
     Menu::color = gCachedMenuColor;
     gRemoteColorOverride = false;
+#if defined(FAN_IGNORE_EEPROM)
+    if (!isSecondary) {
+        MenuHandler<menuCount>::SetMenuValue(FanSpeed, FAN_DEFAULT_MENU_VALUE, false);
+    }
+#endif
 }
 
 Material* Menu::GetMaterial() {

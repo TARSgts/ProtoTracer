@@ -26,9 +26,9 @@ private:
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kFaceCount =
         #ifdef ENABLE_BAD_APPLE_FACE
-        12
+        14
         #else
-        11
+        13
         #endif
     ;
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
@@ -80,7 +80,9 @@ private:
         F("OSCIL"),
         F("SPECTRUM"),
         F("DVDLOGO"),
-        F("MERGESRT")
+        F("MERGESRT"),
+        F("PONG"),
+        F("INVADER")
         #ifdef ENABLE_BAD_APPLE_FACE
         ,F("BADAPPLE")
         #endif
@@ -424,6 +426,9 @@ public:
         GetDvdObject()->Disable();
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
+#ifdef ENABLE_BAD_APPLE_FACE
+        ResetBadAppleUsage();
+#endif
 
         uint8_t mode = Menu::GetFaceState();//change by button press
 
@@ -475,8 +480,10 @@ public:
             case 8: SpectrumAnalyzerFace();         break;
             case 9: DVDLogoFace(0.0f);              break;
             case 10: MergeSortFace();               break;
+            case 11: PongAutoFace();                break;
+            case 12: SpaceInvadersAutoFace();       break;
             #ifdef ENABLE_BAD_APPLE_FACE
-            case 11: BadAppleFace();                break;
+            case 13: BadAppleFace();                break;
             #endif
             default: SpectrumAnalyzerFace();        break;
         }

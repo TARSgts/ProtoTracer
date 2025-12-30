@@ -330,6 +330,9 @@ public:
     void Update(float ratio) override {
         pM.Reset();
         rear.Reset();
+#ifdef ENABLE_BAD_APPLE_FACE
+        ResetBadAppleUsage();
+#endif
         
         Menu::Update(ratio);
 

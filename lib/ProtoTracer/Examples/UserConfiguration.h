@@ -94,6 +94,14 @@
 #define IR_REMOTE_CODE_DECREMENT 0xBB44FF00UL
 #endif
 
+#ifndef IR_REMOTE_CODE_FAN_INCREMENT
+#define IR_REMOTE_CODE_FAN_INCREMENT 0xF609FF00UL
+#endif
+
+#ifndef IR_REMOTE_CODE_FAN_DECREMENT
+#define IR_REMOTE_CODE_FAN_DECREMENT 0xF807FF00UL
+#endif
+
 #ifndef IR_REMOTE_COLOR_CODE_0
 #define IR_REMOTE_COLOR_CODE_0 0xE916FF00UL
 #endif
@@ -155,6 +163,33 @@
 #define ENABLE_FACE_COLOR_STRIP
 #endif
 
+/**
+ * @def ENABLE_BAD_APPLE_FACE
+ * @brief Enables the Bad Apple animated face option in supported projects.
+ */
+//#define ENABLE_BAD_APPLE_FACE
+#if DOXYGEN
+#define ENABLE_BAD_APPLE_FACE
+#endif
+
+/**
+ * @def BAD_APPLE_BW_64X32
+ * @brief Uses a 64x32 monochrome Bad Apple sequence packed to 1-bit per pixel.
+ */
+//#define BAD_APPLE_BW_64X32
+#if DOXYGEN
+#define BAD_APPLE_BW_64X32
+#endif
+
+/**
+ * @def BAD_APPLE_SD_STREAM
+ * @brief Streams Bad Apple frames from SD to avoid RAM pressure.
+ */
+//#define BAD_APPLE_SD_STREAM
+#if DOXYGEN
+#define BAD_APPLE_SD_STREAM
+#endif
+
 #ifndef FACE_COLOR_STRIP_PIN
 #define FACE_COLOR_STRIP_PIN 20
 #endif
@@ -170,6 +205,28 @@
 #ifndef FACE_COLOR_STRIP_BRIGHTNESS
 #define FACE_COLOR_STRIP_BRIGHTNESS 128
 #endif
+
+/**
+ * @def FAN_PWM_PIN
+ * @brief PWM output pin for the cooling fan.
+ */
+#ifndef FAN_PWM_PIN
+#define FAN_PWM_PIN 15
+#endif
+
+/**
+ * @def FAN_DEFAULT_MENU_VALUE
+ * @brief Default fan speed menu value (0-10). 10 = 100%.
+ */
+#ifndef FAN_DEFAULT_MENU_VALUE
+#define FAN_DEFAULT_MENU_VALUE 6
+#endif
+
+/**
+ * @def FAN_IGNORE_EEPROM
+ * @brief Forces the fan speed to FAN_DEFAULT_MENU_VALUE at boot (no EEPROM restore).
+ */
+#define FAN_IGNORE_EEPROM
 
 /**
  * @def TTP223_PIN
