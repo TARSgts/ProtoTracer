@@ -203,9 +203,6 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
 #if !defined(MORSEBUTTON)
     gMenuValuesReady = true;
 #endif
-#if defined(FAN_IGNORE_EEPROM)
-    MenuHandler<menuCount>::SetMenuValue(FanSpeed, FAN_DEFAULT_MENU_VALUE, false);
-#endif
 #endif
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
     EnsureRemoteConfigured();
@@ -249,11 +246,6 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
     }
     Menu::color = gCachedMenuColor;
     gRemoteColorOverride = false;
-#if defined(FAN_IGNORE_EEPROM)
-    if (!isSecondary) {
-        MenuHandler<menuCount>::SetMenuValue(FanSpeed, FAN_DEFAULT_MENU_VALUE, false);
-    }
-#endif
 }
 
 Material* Menu::GetMaterial() {

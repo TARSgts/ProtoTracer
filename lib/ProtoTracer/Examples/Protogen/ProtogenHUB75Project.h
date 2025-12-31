@@ -10,6 +10,7 @@
 #include "../../Assets/Models/OBJ/BSOD_3.h"
 #include "../../Assets/Textures/Static/DVDLogoImage.h"
 #include "../../Scene/Materials/Static/SimpleMaterial.h"
+#include "../../Scene/Materials/Animated/ConfettiParticles.h"
 
 #include "../../Camera/CameraManager/Implementations/HUB75DeltaCameras.h"
 #include "../../Controller/HUB75Controller.h"
@@ -41,6 +42,7 @@ private:
     TexturedQuad dvdQuad; ///< Flat quad used when rendering the sprite-based DVD image.
     DVD_logo dvdImage = DVD_logo(Vector2D(), Vector2D()); ///< Sprite that emulates the printed DVD logo.
     SimpleMaterial dvdMaterial = SimpleMaterial(RGBColor(0, 255, 170));
+    ConfettiParticles dvdConfetti = ConfettiParticles(Vector2D(192.0f, 94.0f), Vector2D(96.0f, 47.0f));
     TexturedQuad bsodQuad; ///< Quad used for the BSOD static image.
     BSOD_3 bsodImage = BSOD_3(Vector2D(), Vector2D()); ///< Static BSOD image material.
     Vector2D dvdOffset = Vector2D(); ///< Logo offset relative to the face center.
@@ -49,12 +51,17 @@ private:
     const float dvdEdgeMargin = 0.0f; ///< No bezel so the square can sweep the entire face.
     const float dvdScale = 0.35f; ///< Relative size of the square after alignment (1.0 fills the canvas).
     const float dvdAlignMargin = 0.0f; ///< No additional margin during alignment.
-    const float dvdCornerTolerance = 12.0f; ///< How close (in face units) we must be to both edges to count as a corner hit.
+    const float dvdCornerTolerance = 0.0f; ///< How close (in face units) we must be to both edges to count as a corner hit.
     Vector2D dvdTravelPadding = Vector2D(); ///< Optional padding (per axis) to keep the square off the walls.
     Vector2D dvdCustomTravelMin = Vector2D(); ///< Explicit min travel bounds when fine calibration is needed.
     Vector2D dvdCustomTravelMax = Vector2D(); ///< Explicit max travel bounds when fine calibration is needed.
     bool dvdUseCustomTravelBounds = false; ///< True if SetDVDTravelBounds() has been called.
     bool dvdConfettiEnabled = true; ///< Toggle to enable/disable confetti bursts on corner hits.
+    bool dvdConfettiActive = false; ///< Tracks whether the confetti overlay is currently active.
+    uint32_t dvdConfettiEndMs = 0; ///< Timestamp (ms) when the confetti overlay should stop.
+    const uint32_t dvdConfettiDurationMs = 1000; ///< How long (ms) the confetti overlay should remain visible.
+    const float dvdConfettiOpacity = 0.8f; ///< Foreground confetti intensity.
+    const float dvdConfettiBackgroundOpacity = 0.5f; ///< Background confetti intensity.
     const RGBColor dvdBouncePalette[6] = {
         RGBColor(0, 255, 170),
         RGBColor(255, 105, 180),
@@ -171,11 +178,25 @@ private:
         }
     }
 
-    void TriggerDvdConfetti() {
+    void TriggerDvdConfetti(const Vector2D& origin, const Vector2D& direction) {
         if (!dvdConfettiEnabled) return;
-        AddMaterialFrame(Color::CRAINBOWNOISE, 0.8f);
-        AddBackgroundMaterialFrame(Color::CRAINBOWNOISE, 0.5f);
-        SetStripColorOverride(Color::CRAINBOW);
+        dvdConfetti.Trigger(origin, direction, 70.0f, 18);
+        dvdConfettiActive = true;
+        dvdConfettiEndMs = millis() + dvdConfettiDurationMs;
+    }
+
+    void UpdateDvdConfetti() {
+        dvdConfetti.Update();
+        if (!dvdConfettiEnabled) return;
+        if (dvdConfettiActive && millis() <= dvdConfettiEndMs) {
+            AddMaterialFrame(dvdConfetti, dvdConfettiOpacity);
+            AddBackgroundMaterialFrame(dvdConfetti, dvdConfettiBackgroundOpacity);
+            SetStripColorOverride(Color::CRAINBOW);
+        } else if (dvdConfettiActive) {
+            AddMaterialFrame(dvdConfetti, 0.0f);
+            AddBackgroundMaterialFrame(dvdConfetti, 0.0f);
+            dvdConfettiActive = false;
+        }
     }
 
     void SetDVDConfettiEnabled(bool enabled) {
@@ -319,11 +340,15 @@ private:
         }
 
         if (bounced) {
-            auto nearEdge = [&](float value, float minVal, float maxVal) {
-                return (fabsf(value - minVal) <= dvdCornerTolerance) || (fabsf(value - maxVal) <= dvdCornerTolerance);
-            };
-            if (nearEdge(dvdOffset.X, minEdge.X, maxEdge.X) && nearEdge(dvdOffset.Y, minEdge.Y, maxEdge.Y)) {
-                TriggerDvdConfetti();
+            bool nearMinX = fabsf(dvdOffset.X - minEdge.X) <= dvdCornerTolerance;
+            bool nearMaxX = fabsf(dvdOffset.X - maxEdge.X) <= dvdCornerTolerance;
+            bool nearMinY = fabsf(dvdOffset.Y - minEdge.Y) <= dvdCornerTolerance;
+            bool nearMaxY = fabsf(dvdOffset.Y - maxEdge.Y) <= dvdCornerTolerance;
+            if ((nearMinX || nearMaxX) && (nearMinY || nearMaxY)) {
+                Vector2D cornerLocal(nearMinX ? -canvasHalf.X : canvasHalf.X,
+                                     nearMinY ? -canvasHalf.Y : canvasHalf.Y);
+                Vector2D burstDir(nearMinX ? 1.0f : -1.0f, nearMinY ? 1.0f : -1.0f);
+                TriggerDvdConfetti(cornerLocal, burstDir);
             }
             AdvanceDvdColor();
         }
@@ -348,6 +373,7 @@ private:
             dvdImage.SetPosition(Vector2D(worldCenter.X, worldCenter.Y));
         }
 
+        UpdateDvdConfetti();
         ApplyMenuOrDefaultColor(Color::CWHITE, 0.9f);
     }
 
@@ -405,6 +431,10 @@ public:
         deltaDisplayBackground.GetObject()->SetMaterial(GetFaceMaterial());
         GetDvdObject()->SetMaterial(GetDvdMaterial());
         bsodQuad.GetObject()->SetMaterial(&bsodImage);
+        dvdConfetti.SetSize(GetCameraSize());
+        dvdConfetti.SetPosition(GetCameraSize().Divide(2.0f));
+        AddMaterial(Material::Add, &dvdConfetti, 12, 0.0f, 1.0f);
+        AddBackgroundMaterial(Material::Add, &dvdConfetti, 12, 0.0f, 1.0f);
         AdvanceDvdColor();
         SetDVDConfettiEnabled(true);
         GetDvdObject()->Disable(); // hidden until the DVD face is selected

@@ -222,11 +222,6 @@
 #define FAN_DEFAULT_MENU_VALUE 6
 #endif
 
-/**
- * @def FAN_IGNORE_EEPROM
- * @brief Forces the fan speed to FAN_DEFAULT_MENU_VALUE at boot (no EEPROM restore).
- */
-#define FAN_IGNORE_EEPROM
 
 /**
  * @def TTP223_PIN
