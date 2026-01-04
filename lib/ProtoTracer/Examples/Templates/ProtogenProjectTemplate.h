@@ -33,6 +33,9 @@
 #include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
 #include "../../Scene/Materials/Animated/Pong.h"
 #include "../../Scene/Materials/Animated/SpaceInvaders.h"
+#include "../../Scene/Materials/Animated/FlappyBird.h"
+#include "../../Scene/Materials/Animated/Snake.h"
+#include "../../Scene/Materials/Animated/Pacman.h"
 #ifdef ENABLE_BAD_APPLE_FACE
 #ifdef BAD_APPLE_SD_STREAM
 #include "../../Assets/Textures/Animated/BapleFullSD.h"
@@ -160,8 +163,8 @@ private:
     /**
      * @brief Material animators for face and background layering.
      */
-    MaterialAnimator<20> materialAnimator;   ///< Handles layering of face materials.
-    MaterialAnimator<20> backgroundMaterial; ///< Handles layering of background materials.
+    MaterialAnimator<24> materialAnimator;   ///< Handles layering of face materials.
+    MaterialAnimator<24> backgroundMaterial; ///< Handles layering of background materials.
     
     /**
      * @brief Audio-reactive materials.
@@ -172,6 +175,9 @@ private:
     MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
     PongFace pong = PongFace(Vector2D(200, 100), Vector2D(0, 0));
     SpaceInvadersMaterial spaceInvaders = SpaceInvadersMaterial(Vector2D(200, 100), Vector2D(0, 0));
+    FlappyBirdMaterial flappyBird = FlappyBirdMaterial(Vector2D(200, 100), Vector2D(0, 0));
+    SnakeMaterial snake = SnakeMaterial(Vector2D(200, 100), Vector2D(0, 0));
+    PacmanMaterial pacman = PacmanMaterial(Vector2D(200, 100), Vector2D(0, 0));
 #ifdef ENABLE_BAD_APPLE_FACE
     #ifdef BAD_APPLE_SD_STREAM
     BapleFullSequenceSD badApple = BapleFullSequenceSD("/BAPLE.BIN", Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
@@ -231,6 +237,9 @@ private:
     float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
     float offsetFacePong = 0.0f; ///< Offset for Pong face.
     float offsetFaceInvaders = 0.0f; ///< Offset for Space Invaders face.
+    float offsetFaceFlappy = 0.0f; ///< Offset for Flappy Bird face.
+    float offsetFaceSnake = 0.0f; ///< Offset for Snake face.
+    float offsetFacePacman = 0.0f; ///< Offset for Pacman face.
 #ifdef ENABLE_BAD_APPLE_FACE
     float offsetFaceBadApple = 0.0f; ///< Offset for Bad Apple face.
     bool badAppleUsedThisFrame = false;
@@ -243,6 +252,9 @@ private:
     uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
     uint8_t offsetFaceIndPong = 56; ///< Index for Pong offset in EasyEaseAnimator.
     uint8_t offsetFaceIndInvaders = 57; ///< Index for Space Invaders offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndFlappy = 58; ///< Index for Flappy Bird offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndSnake = 59; ///< Index for Snake offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndPacman = 60; ///< Index for Pacman offset in EasyEaseAnimator.
 #ifdef ENABLE_BAD_APPLE_FACE
     uint8_t offsetFaceIndBadApple = 55; ///< Index for Bad Apple offset in EasyEaseAnimator.
 #endif
@@ -645,6 +657,21 @@ protected:
      * @brief Enables the Space Invaders auto-play face.
      */
     void SpaceInvadersAutoFace();
+
+    /**
+     * @brief Enables the Flappy Bird auto-play face.
+     */
+    void FlappyBirdAutoFace();
+
+    /**
+     * @brief Enables the Snake auto-play face.
+     */
+    void SnakeAutoFace();
+
+    /**
+     * @brief Enables the Pacman auto-play face.
+     */
+    void PacmanAutoFace();
 
     /**
      * @brief Enables the Bad Apple animated face.

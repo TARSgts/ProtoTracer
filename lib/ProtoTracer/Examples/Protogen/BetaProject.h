@@ -30,9 +30,9 @@ private:
     FunctionGenerator fGen3 = FunctionGenerator(FunctionGenerator::Sine, -7.5f, 7.5f, 2.9f);
     
     #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[14] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("BADAPPLE")};
+	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("BADAPPLE")};
     #else
-	const __FlashStringHelper* faceArray[13] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2")};
+	const __FlashStringHelper* faceArray[15] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE")};
     #endif
 
     KeyFrameTrack<1, 10> botFinLR1 = KeyFrameTrack<1, 10>(0.0f, 1.0f, KeyFrameInterpolation::Cosine);
@@ -299,9 +299,9 @@ private:
 public:
     BetaProject() : ProtogenProject(&cameras, &controller, 4, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
         #ifdef ENABLE_BAD_APPLE_FACE
-        14
+        16
         #else
-        13
+        15
         #endif
     ){
         scene.AddObject(pM.GetObject());
@@ -391,8 +391,10 @@ public:
             case 10: Gentle();      break;
             case 11: AudioReactiveGradientFace();   break;
             case 12: OscilloscopeFace();            break;
+            case 13: FlappyBirdAutoFace();          break;
+            case 14: SnakeAutoFace();               break;
             #ifdef ENABLE_BAD_APPLE_FACE
-            case 13: BadAppleFace();                break;
+            case 15: BadAppleFace();                break;
             #endif
             default: SpectrumAnalyzerFace();        break;
         }

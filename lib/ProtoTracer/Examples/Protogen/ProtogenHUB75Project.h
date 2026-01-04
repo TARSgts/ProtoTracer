@@ -27,9 +27,9 @@ private:
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kFaceCount =
         #ifdef ENABLE_BAD_APPLE_FACE
-        14
+        16
         #else
-        13
+        15
         #endif
     ;
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
@@ -89,7 +89,9 @@ private:
         F("DVDLOGO"),
         F("MERGESRT"),
         F("PONG"),
-        F("INVADER")
+        F("INVADER"),
+        F("FLAPPY"),
+        F("SNAKE")
         #ifdef ENABLE_BAD_APPLE_FACE
         ,F("BADAPPLE")
         #endif
@@ -512,8 +514,10 @@ public:
             case 10: MergeSortFace();               break;
             case 11: PongAutoFace();                break;
             case 12: SpaceInvadersAutoFace();       break;
+            case 13: FlappyBirdAutoFace();          break;
+            case 14: SnakeAutoFace();               break;
             #ifdef ENABLE_BAD_APPLE_FACE
-            case 13: BadAppleFace();                break;
+            case 15: BadAppleFace();                break;
             #endif
             default: SpectrumAnalyzerFace();        break;
         }
