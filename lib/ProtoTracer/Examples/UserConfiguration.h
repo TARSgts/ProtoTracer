@@ -190,6 +190,15 @@
 #define BAD_APPLE_SD_STREAM
 #endif
 
+/**
+ * @def ENABLE_GIF_FACE
+ * @brief Enables the SmartMatrix SD GIF face (uses GifDecoder + AnimatedGIF).
+ */
+#define ENABLE_GIF_FACE
+#if DOXYGEN
+#define ENABLE_GIF_FACE
+#endif
+
 #ifndef FACE_COLOR_STRIP_PIN
 #define FACE_COLOR_STRIP_PIN 20
 #endif

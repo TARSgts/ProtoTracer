@@ -14,6 +14,9 @@
 
 #include "../../Camera/CameraManager/Implementations/HUB75DeltaCameras.h"
 #include "../../Controller/HUB75Controller.h"
+#ifdef ENABLE_GIF_FACE
+#include "../../ExternalDevices/Displays/SmartMatrixGifPlayer.h"
+#endif
 
 // E 001 TARS: Add in a plane to the corner of the display to illuminate side panel ---
 // ASTRALTODO: Update and use a flat circle for this!
@@ -26,7 +29,9 @@ private:
     // Render the real DVD logo sprite by default (falls back to cube/mesh via kDvdRenderMode).
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kFaceCount =
-        #ifdef ENABLE_BAD_APPLE_FACE
+        #if defined(ENABLE_BAD_APPLE_FACE) && defined(ENABLE_GIF_FACE)
+        17
+        #elif defined(ENABLE_BAD_APPLE_FACE) || defined(ENABLE_GIF_FACE)
         16
         #else
         15
@@ -71,6 +76,10 @@ private:
         RGBColor(180, 160, 255)
     };
     uint8_t dvdBouncePaletteIndex = 0;
+#ifdef ENABLE_GIF_FACE
+    SmartMatrixGifPlayer gifPlayer;
+    bool gifFaceActive = false;
+#endif
 
     // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
     SolidCube sideIllum;
@@ -94,6 +103,9 @@ private:
         F("SNAKE")
         #ifdef ENABLE_BAD_APPLE_FACE
         ,F("BADAPPLE")
+        #endif
+        #ifdef ENABLE_GIF_FACE
+        ,F("GIF")
         #endif
     };
 
@@ -414,6 +426,12 @@ private:
         SetStripColorOverride(Color::CBLUE);
     }
 
+#ifdef ENABLE_GIF_FACE
+    void GifFace() {
+        gifFaceActive = true;
+    }
+#endif
+
 public:
     ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 3, Vector2D(), Vector2D(192.0f, 94.0f), 22, 23, kFaceCount, 21){
         scene.AddObject(pM.GetObject());
@@ -453,6 +471,13 @@ public:
         SetMenuSize(Vector2D(192, 56));
     }
 
+    void Initialize() override {
+        ProtogenProject::Initialize();
+#ifdef ENABLE_GIF_FACE
+        gifPlayer.Initialize();
+#endif
+    }
+
     void Update(float ratio) override {
         pM.Reset();
         GetDvdObject()->Disable();
@@ -460,6 +485,9 @@ public:
         pM.GetObject()->Enable();
 #ifdef ENABLE_BAD_APPLE_FACE
         ResetBadAppleUsage();
+#endif
+#ifdef ENABLE_GIF_FACE
+        gifFaceActive = false;
 #endif
 
         uint8_t mode = Menu::GetFaceState();//change by button press
@@ -481,15 +509,29 @@ public:
         }
 #endif
 
-        UpdateFace(ratio);
+#ifdef ENABLE_GIF_FACE
+        gifPlayer.SetActive(gifFaceActive);
+        if (gifFaceActive) {
+            gifPlayer.Update();
+        }
+        const bool gifDecoding = gifFaceActive && gifPlayer.IsDecoding();
+        if (gifDecoding) {
+            pM.GetObject()->Disable();
+        }
+        controller.SetExternalFrameProvider(gifDecoding);
+#endif
 
-        pM.Update();
+        if (!gifDecoding) {
+            UpdateFace(ratio);
 
-        if (pM.GetObject()->IsEnabled()) {
-            AlignObjectFace(pM.GetObject(), -7.5f);
+            pM.Update();
 
-            pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
-            pM.GetObject()->UpdateTransform();
+            if (pM.GetObject()->IsEnabled()) {
+                AlignObjectFace(pM.GetObject(), -7.5f);
+
+                pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
+                pM.GetObject()->UpdateTransform();
+            }
         }
     }
 
@@ -518,6 +560,13 @@ public:
             case 14: SnakeAutoFace();               break;
             #ifdef ENABLE_BAD_APPLE_FACE
             case 15: BadAppleFace();                break;
+            #endif
+            #ifdef ENABLE_GIF_FACE
+            #ifdef ENABLE_BAD_APPLE_FACE
+            case 16: GifFace();                     break;
+            #else
+            case 15: GifFace();                     break;
+            #endif
             #endif
             default: SpectrumAnalyzerFace();        break;
         }

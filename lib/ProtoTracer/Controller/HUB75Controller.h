@@ -58,4 +58,20 @@ public:
      * @param maxAccentBrightness The maximum accent brightness value (0-255).
      */
     void SetAccentBrightness(uint8_t maxAccentBrightness) override;
+
+    /**
+     * @brief Enables/disables an external frame provider (e.g., SmartMatrix GIF face).
+     *
+     * When enabled, the controller skips copying ProtoTracer pixels into the SmartMatrix
+     * background layer, allowing external code to render directly.
+     */
+    void SetExternalFrameProvider(bool enabled);
+
+    /**
+     * @brief Checks if an external frame provider is active.
+     */
+    bool IsExternalFrameProvider() const;
+
+private:
+    bool externalFrameProvider = false;
 };

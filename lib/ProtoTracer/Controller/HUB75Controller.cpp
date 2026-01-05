@@ -29,6 +29,10 @@ void HUB75Controller::Display(){
     matrix.setBrightness(brightness);
     apamatrix.setBrightness(accentBrightness);
 
+    if (externalFrameProvider) {
+        return;
+    }
+
     IPixelGroup* camPixels = cameras->GetCameras()[0]->GetPixelGroup();
     IPixelGroup* camSidePixelsL = cameras->GetCameras()[1]->GetPixelGroup();
     IPixelGroup* camSidePixelsR = cameras->GetCameras()[2]->GetPixelGroup();
@@ -71,4 +75,12 @@ void HUB75Controller::SetAccentBrightness(uint8_t maxAccentBrightness){
     if(isOn){//past soft start
         this->accentBrightness = maxAccentBrightness * 12 + 5;
     }
+}
+
+void HUB75Controller::SetExternalFrameProvider(bool enabled){
+    externalFrameProvider = enabled;
+}
+
+bool HUB75Controller::IsExternalFrameProvider() const{
+    return externalFrameProvider;
 }

@@ -133,4 +133,7 @@ const uint32_t kApaMatrixOptions = (SM_APA102_OPTIONS_COLOR_ORDER_BGR);
  */
 const uint8_t kApaBackgroundLayerOptions = (SM_BACKGROUND_OPTIONS_NONE);
 
+// Expose the SmartMatrix background layer for optional direct rendering (e.g., GIF face).
+extern SMLayerBackground<rgb24, kBackgroundLayerOptions> backgroundLayer;
+
 #endif
