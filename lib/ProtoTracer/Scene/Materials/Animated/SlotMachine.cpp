@@ -24,57 +24,71 @@ inline bool InRect(float x, float y, float hw, float hh) {
     return fabsf(x) <= hw && fabsf(y) <= hh;
 }
 
-RGBColor DrawSymbol(uint8_t symbol, float u, float v, const RGBColor* palette) {
+// Sprite data (12x12 indexed) for slot symbols
+struct SpriteData {
+    uint8_t width;
+    uint8_t height;
+    const uint8_t* mem;
+    const uint8_t* pal;
+    float scale;
+    bool transparentZero;
+};
+
+// BAR (15x7 sprite from BarPixelSprite)
+static const uint8_t kBarMem[] PROGMEM = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,2,2,2,0,2,2,0,0,2,2,1,1,2,0,2,0,2,0,2,0,2,0,2,0,2,1,1,2,0,0,2,2,0,0,0,2,0,0,2,2,1,1,2,0,2,0,2,0,2,0,2,0,2,0,2,1,1,2,0,0,2,2,0,2,0,2,0,2,0,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+static const uint8_t kBarPal[] PROGMEM = {255,255,255,255,242,0,0,0,0};
+
+// CHERRY
+static const uint8_t kCherryMem[] PROGMEM = {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,12,15,15,15,15,15,15,15,15,15,15,7,2,4,2,3,7,15,15,15,15,15,15,15,13,1,7,15,15,15,15,15,15,15,15,15,2,15,12,15,15,15,15,15,15,11,0,4,15,15,11,6,13,15,15,15,15,8,5,5,6,0,0,5,10,15,15,15,15,15,9,9,15,8,8,10,10,15,15,15,15,15,15,15,15,15,8,10,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const uint8_t kCherryPal[] PROGMEM = {253,165,0,22,172,0,9,165,0,2,141,6,0,77,26,245,29,0,145,17,0,0,49,13,211,7,0,189,7,0,158,3,0,88,3,0,0,8,5,0,4,9,26,0,0,0,0,0};
+
+// SEVEN
+static const uint8_t kSevenMem[] PROGMEM = {15,15,15,15,15,15,15,15,15,15,15,15,15,10,14,1,1,1,10,15,10,13,15,15,15,7,0,4,4,4,5,5,5,13,15,15,15,7,2,3,3,3,4,3,6,13,15,15,15,8,7,15,15,15,0,7,13,15,15,15,15,15,15,15,12,0,7,9,14,15,15,15,15,15,15,14,8,6,8,15,15,15,15,15,15,15,15,13,0,6,8,15,15,15,15,15,15,15,15,2,0,6,8,15,15,15,15,15,15,15,15,10,10,10,10,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const uint8_t kSevenPal[] PROGMEM = {253,196,0,194,137,0,228,66,0,254,54,0,253,53,0,251,49,0,252,44,0,247,27,0,229,19,0,207,12,0,184,12,0,105,5,0,9,2,0,28,0,0,2,0,1,0,0,0};
+
+// DIAMOND
+static const uint8_t kDiamondMem[] PROGMEM = {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,13,3,3,2,2,4,7,14,15,15,15,11,2,1,1,1,0,2,4,0,13,15,12,4,5,2,5,5,6,6,9,8,9,15,15,12,8,4,6,0,0,9,5,7,12,15,15,15,12,5,6,0,9,5,9,11,15,15,15,15,15,13,7,7,7,10,12,15,15,15,15,15,15,15,14,8,10,15,15,15,15,15,15,15,15,15,15,14,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const uint8_t kDiamondPal[] PROGMEM = {0,250,253,0,243,243,0,241,248,0,238,247,0,230,249,0,217,243,0,203,232,0,162,191,0,120,141,0,92,109,0,64,76,0,16,11,0,6,6,0,2,2,0,1,1,0,0,0};
+
+// BELL
+static const uint8_t kBellMem[] PROGMEM = {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,12,0,14,15,15,15,15,15,15,15,15,13,7,2,6,11,15,15,15,15,15,15,15,14,0,1,3,6,15,15,15,15,15,15,15,6,0,1,2,5,15,15,15,15,15,15,12,5,1,2,4,5,14,15,15,15,15,9,3,0,3,3,4,5,6,11,15,15,15,9,3,10,11,0,14,11,10,10,15,15,15,15,14,8,8,4,7,8,8,12,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const uint8_t kBellPal[] PROGMEM = {254,245,0,252,236,0,252,212,0,249,182,0,236,161,0,226,143,0,141,78,0,46,26,0,23,10,0,3,14,0,10,5,0,6,4,0,2,4,5,1,0,69,1,0,0,0,0,0};
+
+// STAR
+static const uint8_t kStarMem[] PROGMEM = {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,8,15,15,15,15,15,15,15,15,15,15,12,2,9,15,15,15,15,15,15,15,15,15,12,0,5,13,15,15,15,15,15,14,5,0,0,0,3,3,2,7,14,15,15,15,15,6,1,1,4,6,8,15,15,15,15,15,15,9,2,8,7,6,15,15,15,15,15,15,13,4,4,11,9,5,9,15,15,15,15,15,11,6,12,15,12,11,8,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const uint8_t kStarPal[] PROGMEM = {252,247,0,255,236,0,250,226,0,255,219,0,251,210,0,253,198,0,249,184,0,229,157,0,225,133,0,142,88,0,73,38,0,22,14,0,2,4,2,23,0,1,0,0,1,0,0,0};
+
+inline RGBColor SampleSprite(const SpriteData& sprite, float u, float v) {
+    float us = u * sprite.scale;
+    float vs = v * sprite.scale;
+    float gx = (us + 1.0f) * 0.5f * sprite.width;
+    float gy = ((-vs) + 1.0f) * 0.5f * sprite.height; // flip vertically to match display
+    if (gx < 0.0f || gy < 0.0f || gx >= sprite.width || gy >= sprite.height) return RGBColor();
+    uint8_t ix = static_cast<uint8_t>(gx);
+    uint8_t iy = static_cast<uint8_t>(gy);
+    uint16_t idx = static_cast<uint16_t>(iy) * sprite.width + ix;
+    uint8_t palIndex = pgm_read_byte_near(sprite.mem + idx);
+    if (palIndex >= 15) return RGBColor(); // transparent
+    if (sprite.transparentZero && palIndex == 0) return RGBColor();
+    uint16_t palPos = static_cast<uint16_t>(palIndex) * 3;
+    uint8_t r = pgm_read_byte_near(sprite.pal + palPos + 0);
+    uint8_t g = pgm_read_byte_near(sprite.pal + palPos + 1);
+    uint8_t b = pgm_read_byte_near(sprite.pal + palPos + 2);
+    return RGBColor(r, g, b);
+}
+
+RGBColor DrawSymbol(uint8_t symbol, float u, float v, const RGBColor* /*palette*/) {
     // u, v are normalized to [-1, 1] inside the cell (0,0 = center)
-    switch(symbol % 6) {
-        case 0: { // BAR (gold)
-            if (InRect(u, v, 0.55f, 0.22f)) {
-                float shade = 0.7f + 0.3f * (1.0f - (v + 1.0f) * 0.5f);
-                RGBColor c = palette[0];
-                return RGBColor(uint8_t(c.R * shade), uint8_t(c.G * shade), uint8_t(c.B * shade));
-            }
-            break;
-        }
-        case 1: { // CHERRY (two orbs + stem)
-            float stemX = u + 0.15f;
-            float stemY = v + 0.2f;
-            if (InRect(stemX, stemY, 0.05f, 0.25f)) return RGBColor(90, 200, 90);
-            if (InRect(stemX - 0.08f, stemY - 0.12f, 0.05f, 0.16f)) return RGBColor(90, 200, 90);
-            if (InCircle(u - 0.15f, v - 0.1f, 0.25f)) return palette[1];
-            if (InCircle(u + 0.1f, v - 0.05f, 0.22f)) return palette[1];
-            break;
-        }
-        case 2: { // SEVEN
-            if (InRect(u, v + 0.4f, 0.55f, 0.1f)) return palette[2];
-            if (InRect(u + 0.15f, v, 0.12f, 0.6f)) return palette[2];
-            if (InRect(u - 0.05f, v - 0.05f, 0.12f, 0.45f)) return palette[2];
-            break;
-        }
-        case 3: { // DIAMOND
-            float d = fabsf(u) + fabsf(v * 0.9f);
-            if (d <= 0.9f) {
-                float t = 1.0f - d / 0.9f;
-                RGBColor c = palette[3];
-                return RGBColor(uint8_t(c.R * (0.7f + 0.3f * t)), uint8_t(c.G * (0.7f + 0.3f * t)), uint8_t(c.B * (0.7f + 0.3f * t)));
-            }
-            break;
-        }
-        case 4: { // BELL
-            if (InCircle(u, v - 0.05f, 0.5f)) return palette[4];
-            if (InRect(u, v + 0.45f, 0.25f, 0.12f)) return palette[4];
-            if (InRect(u, v + 0.62f, 0.12f, 0.06f)) return palette[4];
-            break;
-        }
-        case 5: { // STAR / SHERIFF BADGE
-            if (InRect(u, v, 0.16f, 0.7f)) return palette[5];
-            if (InRect(u, v, 0.7f, 0.16f)) return palette[5];
-            if (InRect(u + v, u - v, 0.4f, 0.1f)) return palette[5];
-            if (InRect(u - v, -(u + v), 0.4f, 0.1f)) return palette[5];
-            break;
-        }
-        default: break;
-    }
-    return RGBColor();
+    static const SpriteData sprites[6] = {
+        {15, 7,  kBarMem,     kBarPal,     1.0f,  false},
+        {12, 12, kCherryMem,  kCherryPal,  0.86f, false},
+        {12, 12, kSevenMem,   kSevenPal,   0.86f, false},
+        {12, 12, kDiamondMem, kDiamondPal, 0.86f, false},
+        {12, 12, kBellMem,    kBellPal,    0.86f, false},
+        {12, 12, kStarMem,    kStarPal,    0.86f, false}
+    };
+    const SpriteData& sprite = sprites[symbol % 6];
+    return SampleSprite(sprite, u, v);
 }
 }
 
@@ -235,8 +249,9 @@ RGBColor SlotMachineMaterial::GetRGB(const Vector3D& position, const Vector3D& /
 
     float innerLeft = -gridHalfW;
     float innerBottom = -gridHalfH;
+    float minAxis = Mathematics::Min(cellWidth, cellHeight);
 
-    // frame border
+    // outer/background and frame (1px-style margin)
     if (fabsf(relative.X) > gridHalfW + gutter * 0.5f || fabsf(relative.Y) > gridHalfH + gutter * 0.5f) {
         return backgroundColor;
     }
@@ -267,14 +282,26 @@ RGBColor SlotMachineMaterial::GetRGB(const Vector3D& position, const Vector3D& /
         return frameColor;
     }
 
-    // local coords normalized to [-1,1] inside cell
+    // smooth reel scrolling: derive symbol index and vertical phase from continuous offset
     float cellCenterX = innerLeft + (col + 0.5f) * cellWidth;
-    float cellCenterY = innerBottom + (row + 0.5f) * cellHeight;
-    float minAxis = Mathematics::Min(cellWidth, cellHeight);
-    float u = (relative.X - cellCenterX) / (minAxis * 0.5f);
-    float v = (relative.Y - cellCenterY) / (minAxis * 0.5f);
+    float relCells = (relative.Y - innerBottom) / cellHeight; // 0..3 across visible window
+    float symbolFloat = reelOffset[col] + relCells - 1.0f;    // center row aligns to 0.5 phase at stop
+    int symbolIdx = static_cast<int>(floorf(symbolFloat));
+    float vPhase = symbolFloat - static_cast<float>(symbolIdx); // 0..1 inside current symbol vertically
+    float vNorm = (vPhase - 0.5f) * 2.0f; // -1..1 bottom->top
+    int wrapped = symbolIdx % kSymbols;
+    if (wrapped < 0) wrapped += kSymbols;
+    uint8_t symbolId = static_cast<uint8_t>(wrapped);
 
-    RGBColor symbol = DrawSymbol(GetSymbol(col, static_cast<int8_t>(row - 1)), u, v, symbolColors);
+    // normalize u/v; BAR uses full cell width/height, others keep square aspect via minAxis
+    float u = (relative.X - cellCenterX) / (minAxis * 0.5f);
+    float v = vNorm * (cellHeight / minAxis);
+    if (symbolId == 0) {
+        u = (relative.X - cellCenterX) / (cellWidth * 0.5f);
+        v = vNorm;
+    }
+
+    RGBColor symbol = DrawSymbol(symbolId, u, v, symbolColors);
     if (symbol.R | symbol.G | symbol.B) return symbol;
 
     // confetti overlay on win
