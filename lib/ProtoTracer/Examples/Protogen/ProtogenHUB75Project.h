@@ -30,13 +30,22 @@ private:
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kFaceCount =
         #if defined(ENABLE_BAD_APPLE_FACE) && defined(ENABLE_GIF_FACE)
-        17
+        18
         #elif defined(ENABLE_BAD_APPLE_FACE) || defined(ENABLE_GIF_FACE)
-        16
+        17
         #else
-        15
+        16
         #endif
     ;
+    static constexpr uint8_t kSlotFaceIndex = 15;
+#ifdef ENABLE_BAD_APPLE_FACE
+    static constexpr uint8_t kBadAppleFaceIndex = 16;
+#endif
+#if defined(ENABLE_GIF_FACE) && defined(ENABLE_BAD_APPLE_FACE)
+    static constexpr uint8_t kGifFaceIndex = 17;
+#elif defined(ENABLE_GIF_FACE)
+    static constexpr uint8_t kGifFaceIndex = 16;
+#endif
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
@@ -100,7 +109,8 @@ private:
         F("PONG"),
         F("INVADER"),
         F("FLAPPY"),
-        F("SNAKE")
+        F("SNAKE"),
+        F("SLOT")
         #ifdef ENABLE_BAD_APPLE_FACE
         ,F("BADAPPLE")
         #endif
@@ -532,6 +542,16 @@ public:
                 pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
                 pM.GetObject()->UpdateTransform();
             }
+        } else {
+            // If GIF face is selected but decoding has stopped (end of GIF), advance to next face.
+            if (gifFaceActive && !gifPlayer.IsDecoding()) {
+                uint8_t nextFace = Menu::GetFaceState() + 1;
+                if (nextFace >= kFaceCount) {
+                    nextFace = 0;
+                }
+                Menu::SetFaceState(nextFace);
+                gifFaceActive = false;
+            }
         }
     }
 
@@ -558,16 +578,13 @@ public:
             case 12: SpaceInvadersAutoFace();       break;
             case 13: FlappyBirdAutoFace();          break;
             case 14: SnakeAutoFace();               break;
-            #ifdef ENABLE_BAD_APPLE_FACE
-            case 15: BadAppleFace();                break;
-            #endif
-            #ifdef ENABLE_GIF_FACE
-            #ifdef ENABLE_BAD_APPLE_FACE
-            case 16: GifFace();                     break;
-            #else
-            case 15: GifFace();                     break;
-            #endif
-            #endif
+            case kSlotFaceIndex: SlotMachineAutoFace(); break;
+#ifdef ENABLE_BAD_APPLE_FACE
+            case kBadAppleFaceIndex: BadAppleFace();    break;
+#endif
+#ifdef ENABLE_GIF_FACE
+            case kGifFaceIndex: GifFace();              break;
+#endif
             default: SpectrumAnalyzerFace();        break;
         }
     }

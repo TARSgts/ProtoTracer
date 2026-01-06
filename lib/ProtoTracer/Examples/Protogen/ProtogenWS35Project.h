@@ -58,9 +58,9 @@ private:
     uint8_t dvdBouncePaletteIndex = 0;
     
     #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[15] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE"), F("BADAPPLE")};
+	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE"), F("SLOT"), F("BADAPPLE")};
     #else
-	const __FlashStringHelper* faceArray[14] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE")};
+	const __FlashStringHelper* faceArray[15] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE"), F("SLOT")};
     #endif
 
     void LinkControlParameters() override {
@@ -386,9 +386,9 @@ private:
 public:
     ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
         #ifdef ENABLE_BAD_APPLE_FACE
-        15
+        16
         #else
-        14
+        15
         #endif
     ){
         scene.AddObject(pM.GetObject());
@@ -469,6 +469,9 @@ public:
                 }
                 else if (mode == 13) {
                     SnakeAutoFace();
+                }
+                else if (mode == 14) {
+                    SlotMachineAutoFace();
                 }
                 #ifdef ENABLE_BAD_APPLE_FACE
                 else {

@@ -165,7 +165,7 @@
 
 /**
  * @def ENABLE_BAD_APPLE_FACE
- * @brief Enables the Bad Apple animated face option in supported projects.
+ * @brief Enables the Bad Apple animated face option in supported projects(this is broken, replaced by ENABLE_GIF_FACE).
  */
 //#define ENABLE_BAD_APPLE_FACE
 #if DOXYGEN
@@ -174,7 +174,7 @@
 
 /**
  * @def BAD_APPLE_BW_64X32
- * @brief Uses a 64x32 monochrome Bad Apple sequence packed to 1-bit per pixel.
+ * @brief Uses a 64x32 monochrome Bad Apple sequence packed to 1-bit per pixel(again this is broken replaced by ENABLE_GIF_FACE).
  */
 //#define BAD_APPLE_BW_64X32
 #if DOXYGEN
@@ -183,7 +183,7 @@
 
 /**
  * @def BAD_APPLE_SD_STREAM
- * @brief Streams Bad Apple frames from SD to avoid RAM pressure.
+ * @brief Streams Bad Apple frames from SD to avoid RAM pressure.(this is broken, replaced by ENABLE_GIF_FACE).
  */
 //#define BAD_APPLE_SD_STREAM
 #if DOXYGEN

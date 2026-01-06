@@ -30,9 +30,9 @@ private:
     FunctionGenerator fGen3 = FunctionGenerator(FunctionGenerator::Sine, -7.5f, 7.5f, 2.9f);
     
     #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("BADAPPLE")};
+	const __FlashStringHelper* faceArray[17] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("SLOT"), F("BADAPPLE")};
     #else
-	const __FlashStringHelper* faceArray[15] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE")};
+	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("SLOT")};
     #endif
 
     KeyFrameTrack<1, 10> botFinLR1 = KeyFrameTrack<1, 10>(0.0f, 1.0f, KeyFrameInterpolation::Cosine);
@@ -299,9 +299,9 @@ private:
 public:
     BetaProject() : ProtogenProject(&cameras, &controller, 4, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
         #ifdef ENABLE_BAD_APPLE_FACE
-        16
+        17
         #else
-        15
+        16
         #endif
     ){
         scene.AddObject(pM.GetObject());
@@ -393,8 +393,9 @@ public:
             case 12: OscilloscopeFace();            break;
             case 13: FlappyBirdAutoFace();          break;
             case 14: SnakeAutoFace();               break;
+            case 15: SlotMachineAutoFace();         break;
             #ifdef ENABLE_BAD_APPLE_FACE
-            case 15: BadAppleFace();                break;
+            case 16: BadAppleFace();                break;
             #endif
             default: SpectrumAnalyzerFace();        break;
         }

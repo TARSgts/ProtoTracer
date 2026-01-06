@@ -36,6 +36,7 @@
 #include "../../Scene/Materials/Animated/FlappyBird.h"
 #include "../../Scene/Materials/Animated/Snake.h"
 #include "../../Scene/Materials/Animated/Pacman.h"
+#include "../../Scene/Materials/Animated/SlotMachine.h"
 #ifdef ENABLE_BAD_APPLE_FACE
 #ifdef BAD_APPLE_SD_STREAM
 #include "../../Assets/Textures/Animated/BapleFullSD.h"
@@ -178,6 +179,7 @@ private:
     FlappyBirdMaterial flappyBird = FlappyBirdMaterial(Vector2D(200, 100), Vector2D(0, 0));
     SnakeMaterial snake = SnakeMaterial(Vector2D(200, 100), Vector2D(0, 0));
     PacmanMaterial pacman = PacmanMaterial(Vector2D(200, 100), Vector2D(0, 0));
+    SlotMachineMaterial slotMachine = SlotMachineMaterial(Vector2D(200, 100), Vector2D(0, 0));
 #ifdef ENABLE_BAD_APPLE_FACE
     #ifdef BAD_APPLE_SD_STREAM
     BapleFullSequenceSD badApple = BapleFullSequenceSD("/BAPLE.BIN", Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
@@ -240,6 +242,7 @@ private:
     float offsetFaceFlappy = 0.0f; ///< Offset for Flappy Bird face.
     float offsetFaceSnake = 0.0f; ///< Offset for Snake face.
     float offsetFacePacman = 0.0f; ///< Offset for Pacman face.
+    float offsetFaceSlot = 0.0f; ///< Offset for Slot Machine face.
 #ifdef ENABLE_BAD_APPLE_FACE
     float offsetFaceBadApple = 0.0f; ///< Offset for Bad Apple face.
     bool badAppleUsedThisFrame = false;
@@ -255,6 +258,7 @@ private:
     uint8_t offsetFaceIndFlappy = 58; ///< Index for Flappy Bird offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSnake = 59; ///< Index for Snake offset in EasyEaseAnimator.
     uint8_t offsetFaceIndPacman = 60; ///< Index for Pacman offset in EasyEaseAnimator.
+    uint8_t offsetFaceIndSlot = 61; ///< Index for Slot Machine offset in EasyEaseAnimator.
 #ifdef ENABLE_BAD_APPLE_FACE
     uint8_t offsetFaceIndBadApple = 55; ///< Index for Bad Apple offset in EasyEaseAnimator.
 #endif
@@ -672,6 +676,11 @@ protected:
      * @brief Enables the Pacman auto-play face.
      */
     void PacmanAutoFace();
+
+    /**
+     * @brief Enables the Slot Machine auto-play face.
+     */
+    void SlotMachineAutoFace();
 
     /**
      * @brief Enables the Bad Apple animated face.

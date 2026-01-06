@@ -11,6 +11,7 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceFlappy, offsetFaceIndFlappy, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceSnake, offsetFaceIndSnake, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFacePacman, offsetFaceIndPacman, 40, 0.0f, 1.0f);
+    eEA.AddParameter(&offsetFaceSlot, offsetFaceIndSlot, 40, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     eEA.AddParameter(&offsetFaceBadApple, offsetFaceIndBadApple, 40, 0.0f, 1.0f);
 #endif
@@ -42,6 +43,7 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &flappyBird, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &snake, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &pacman, 20, 0.0f, 1.0f);
+    materialAnimator.AddMaterial(Material::Replace, &slotMachine, 20, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     materialAnimator.AddMaterial(Material::Replace, &badApple, 20, 0.0f, 1.0f);
 #endif
@@ -67,6 +69,7 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &flappyBird, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &snake, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &pacman, 20, 0.0f, 1.0f);
+    backgroundMaterial.AddMaterial(Material::Add, &slotMachine, 20, 0.0f, 1.0f);
 #ifdef ENABLE_BAD_APPLE_FACE
     backgroundMaterial.AddMaterial(Material::Add, &badApple, 20, 0.0f, 1.0f);
 #endif
@@ -768,6 +771,16 @@ void ProtogenProject::PacmanAutoFace(){
     backgroundMaterial.AddMaterialFrame(pacman, offsetFacePacman);
 }
 
+void ProtogenProject::SlotMachineAutoFace(){
+    slotMachine.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndSlot, 1.0f);
+
+    materialAnimator.AddMaterialFrame(slotMachine, offsetFaceSlot);
+    backgroundMaterial.AddMaterialFrame(slotMachine, offsetFaceSlot);
+}
+
 #ifdef ENABLE_BAD_APPLE_FACE
 void ProtogenProject::BadAppleFace(){
     badAppleUsedThisFrame = true;
@@ -887,6 +900,8 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
     snake.SetPosition(analyzerPosition);
     pacman.SetSize(analyzerSize);
     pacman.SetPosition(analyzerPosition);
+    slotMachine.SetSize(analyzerSize);
+    slotMachine.SetPosition(analyzerPosition);
 #ifdef ENABLE_BAD_APPLE_FACE
     badApple.SetSize(cameraSize);
     badApple.SetPosition(cameraSize.Divide(2.0f));
