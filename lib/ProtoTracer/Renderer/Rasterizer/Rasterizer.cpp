@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "Rasterizer.h"
 
 Quaternion Rasterizer::rayDirection;
@@ -157,6 +159,8 @@ RGBColor Rasterizer::CheckRasterPixel(Triangle2D** triangles, int numTriangles, 
 }
 
 void Rasterizer::Rasterize(Scene* scene, CameraBase* camera) {
+    static std::vector<Triangle2D> triangleBuffer; // Reused to avoid large stack allocations each frame.
+
     if (camera->Is2D()) {
         for (unsigned int i = 0; i < camera->GetPixelGroup()->GetPixelCount(); i++) {
             Vector2D pixelRay = camera->GetPixelGroup()->GetCoordinate(i);
@@ -177,26 +181,35 @@ void Rasterizer::Rasterize(Scene* scene, CameraBase* camera) {
         Vector2D minCoord = camera->GetCameraMinCoordinate();
         Vector2D maxCoord = camera->GetCameraMaxCoordinate();
 
-        QuadTree tree = QuadTree(minCoord, maxCoord);
+        QuadTree tree(minCoord, maxCoord);
 
-        uint16_t tCount = 1;
+        uint16_t tCount = 0;
+        Object3D** objects = scene->GetObjects();
+        const uint8_t objectCount = scene->GetObjectCount();
 
-        for (uint8_t i = 0; i < scene->GetObjectCount(); ++i) {
-            if (scene->GetObjects()[i]->IsEnabled()) {
-                tCount += scene->GetObjects()[i]->GetTriangleGroup()->GetTriangleCount();
+        for (uint8_t i = 0; i < objectCount; ++i) {
+            if (objects[i]->IsEnabled()) {
+                tCount += objects[i]->GetTriangleGroup()->GetTriangleCount();
             }
         }
 
-        Triangle2D triangles[tCount];
+        const uint16_t triangleCapacity = tCount > 0 ? tCount : 1;
+        tree.Reserve(triangleCapacity);
+
+        if (triangleBuffer.size() < triangleCapacity) {
+            triangleBuffer.resize(triangleCapacity);
+        }
+
         uint16_t iterCount = 0;
 
-        for (uint8_t i = 0; i < scene->GetObjectCount(); ++i) {
-            if (scene->GetObjects()[i]->IsEnabled()) {
-                for (uint16_t j = 0; j < scene->GetObjects()[i]->GetTriangleGroup()->GetTriangleCount(); ++j) {
+        for (uint8_t i = 0; i < objectCount; ++i) {
+            if (objects[i]->IsEnabled()) {
+                auto* triangleGroup = objects[i]->GetTriangleGroup();
+                for (uint16_t j = 0; j < triangleGroup->GetTriangleCount(); ++j) {
                     //Create 2D triangle mapping for rasterize, stores 3D coordinates for mapping material to 3d global coordinate space
-                    triangles[iterCount] = Triangle2D(camera->GetLookOffset(), camera->GetTransform(), &scene->GetObjects()[i]->GetTriangleGroup()->GetTriangles()[j], scene->GetObjects()[i]->GetMaterial());
+                    triangleBuffer[iterCount] = Triangle2D(camera->GetLookOffset(), camera->GetTransform(), &triangleGroup->GetTriangles()[j], objects[i]->GetMaterial());
                     
-                    tree.Insert(&triangles[iterCount]);
+                    tree.Insert(&triangleBuffer[iterCount]);
                     iterCount++;
                 }
             }
@@ -204,26 +217,27 @@ void Rasterizer::Rasterize(Scene* scene, CameraBase* camera) {
 
         tree.Rebuild();
 
-        Vector2D scale, pixelRay, materialRay;
-        for (uint16_t i = 0; i < camera->GetPixelGroup()->GetPixelCount(); ++i) {
+        auto* pixelGroup = camera->GetPixelGroup();
+        Vector2D pixelRay;
+        for (uint16_t i = 0; i < pixelGroup->GetPixelCount(); ++i) {
             //Render camera in local camera space
-            pixelRay = camera->GetPixelGroup()->GetCoordinate(i);
+            pixelRay = pixelGroup->GetCoordinate(i);
             
             Node* leafNode = tree.Intersect(pixelRay);
 
             if (!leafNode || leafNode->GetCount() == 0) {
-                camera->GetPixelGroup()->GetColor(i)->R = 0;
-                camera->GetPixelGroup()->GetColor(i)->G = 0;
-                camera->GetPixelGroup()->GetColor(i)->B = 0;
+                pixelGroup->GetColor(i)->R = 0;
+                pixelGroup->GetColor(i)->G = 0;
+                pixelGroup->GetColor(i)->B = 0;
                 continue;
             }
 
             //Render individual pixel, transformed to camera coordinate space
             RGBColor color = CheckRasterPixel(leafNode->GetEntities(), leafNode->GetCount(), pixelRay);
 
-            camera->GetPixelGroup()->GetColor(i)->R = color.R;
-            camera->GetPixelGroup()->GetColor(i)->G = color.G;
-            camera->GetPixelGroup()->GetColor(i)->B = color.B;
+            pixelGroup->GetColor(i)->R = color.R;
+            pixelGroup->GetColor(i)->G = color.G;
+            pixelGroup->GetColor(i)->B = color.B;
         }
     }
 }

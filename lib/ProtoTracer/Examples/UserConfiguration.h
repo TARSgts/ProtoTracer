@@ -87,7 +87,7 @@
 #endif
 
 #ifndef IR_REMOTE_CODE_NEXT_MENU
-#define IR_REMOTE_CODE_NEXT_MENU 0xB946FF00UL
+#define IR_REMOTE_CODE_NEXT_MENU 0xBA45FF00UL
 #endif
 
 #ifndef IR_REMOTE_CODE_DECREMENT
@@ -164,39 +164,75 @@
 #endif
 
 /**
- * @def ENABLE_BAD_APPLE_FACE
- * @brief Enables the Bad Apple animated face option in supported projects(this is broken, replaced by ENABLE_GIF_FACE).
- */
-//#define ENABLE_BAD_APPLE_FACE
-#if DOXYGEN
-#define ENABLE_BAD_APPLE_FACE
-#endif
-
-/**
- * @def BAD_APPLE_BW_64X32
- * @brief Uses a 64x32 monochrome Bad Apple sequence packed to 1-bit per pixel(again this is broken replaced by ENABLE_GIF_FACE).
- */
-//#define BAD_APPLE_BW_64X32
-#if DOXYGEN
-#define BAD_APPLE_BW_64X32
-#endif
-
-/**
- * @def BAD_APPLE_SD_STREAM
- * @brief Streams Bad Apple frames from SD to avoid RAM pressure.(this is broken, replaced by ENABLE_GIF_FACE).
- */
-//#define BAD_APPLE_SD_STREAM
-#if DOXYGEN
-#define BAD_APPLE_SD_STREAM
-#endif
-
-/**
  * @def ENABLE_GIF_FACE
  * @brief Enables the SmartMatrix SD GIF face (uses GifDecoder + AnimatedGIF).
  */
-#define ENABLE_GIF_FACE
+//#define ENABLE_GIF_FACE
 #if DOXYGEN
 #define ENABLE_GIF_FACE
+#endif
+
+/**
+ * @def ENABLE_SORTING_FACE
+ * @brief Enables the sorting algorithm (merge sort) face.
+ */
+#define ENABLE_SORTING_FACE
+#if DOXYGEN
+#define ENABLE_SORTING_FACE
+#endif
+
+/**
+ * @def ENABLE_PONG_FACE
+ * @brief Enables the Pong face.
+ */
+#define ENABLE_PONG_FACE
+#if DOXYGEN
+#define ENABLE_PONG_FACE
+#endif
+
+/**
+ * @def ENABLE_SPACE_INVADERS_FACE
+ * @brief Enables the Space Invaders face.
+ */
+#define ENABLE_SPACE_INVADERS_FACE
+#if DOXYGEN
+#define ENABLE_SPACE_INVADERS_FACE
+#endif
+
+/**
+ * @def ENABLE_FLAPPY_BIRD_FACE
+ * @brief Enables the Flappy Bird face.
+ */
+#define ENABLE_FLAPPY_BIRD_FACE
+#if DOXYGEN
+#define ENABLE_FLAPPY_BIRD_FACE
+#endif
+
+/**
+ * @def ENABLE_SNAKE_FACE
+ * @brief Enables the Snake face.
+ */
+#define ENABLE_SNAKE_FACE
+#if DOXYGEN
+#define ENABLE_SNAKE_FACE
+#endif
+
+/**
+ * @def ENABLE_GAME_OF_LIFE_FACE
+ * @brief Enables the Conway's Game of Life face.
+ */
+#define ENABLE_GAME_OF_LIFE_FACE
+#if DOXYGEN
+#define ENABLE_GAME_OF_LIFE_FACE
+#endif
+
+/**
+ * @def ENABLE_SLOT_MACHINE_FACE
+ * @brief Enables the slot machine face.
+ */
+//#define ENABLE_SLOT_MACHINE_FACE
+#if DOXYGEN
+#define ENABLE_SLOT_MACHINE_FACE
 #endif
 
 #ifndef FACE_COLOR_STRIP_PIN

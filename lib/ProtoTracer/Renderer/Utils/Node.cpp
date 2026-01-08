@@ -28,12 +28,21 @@ uint16_t Node::GetCount() {
 }
 
 void Node::Expand(uint16_t newCount) {
+    // Reuse existing allocation when it is already large enough and still valid.
+    if (entities && newCount <= capacity) return;
+
     Triangle2D** tmp = entities;
     entities = new Triangle2D*[newCount];
 
-    for (uint16_t i = 0; i < newCount; ++i) {
-        if (i < count) entities[i] = tmp[i];
-        else entities[i] = nullptr;
+    uint16_t toCopy = tmp ? count : 0;
+    if (toCopy > newCount) toCopy = newCount;
+
+    uint16_t i = 0;
+    for (; i < toCopy; ++i) {
+        entities[i] = tmp[i];
+    }
+    for (; i < newCount; ++i) {
+        entities[i] = nullptr;
     }
 
     delete[] tmp;

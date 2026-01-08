@@ -96,7 +96,24 @@ SlotMachineMaterial::SlotMachineMaterial(Vector2D dimensions, Vector2D center)
     : size(dimensions.Divide(2.0f)),
       offset(center) {
     RecalculateDimensions();
-    ResetSpin();
+    spinning = false;
+    stopping = false;
+    spinTimer = 0.0f;
+    confettiActive = false;
+    confettiTimer = 0.0f;
+    forceWinPlanned = false;
+    forceWinSymbol = 0;
+    stopStartMs = 0;
+    for (uint8_t i = 0; i < kReels; ++i) {
+        reelOffset[i] = static_cast<float>(random(kSymbols));
+        reelSpeed[i] = 0.0f;
+        snapPending[i] = false;
+        reelStopping[i] = false;
+        reelStopped[i] = true;
+        snapLerping[i] = false;
+        snapProgress[i] = 0.0f;
+    }
+    lastUpdateMs = 0;
 }
 
 void SlotMachineMaterial::SetSize(Vector2D dimensions) {
@@ -131,14 +148,31 @@ void SlotMachineMaterial::ResetSpin() {
     confettiActive = false;
     confettiTimer = 0.0f;
 
+    forceWinPlanned = false;
+    forceWinSymbol = 0;
+
     for (uint8_t i = 0; i < kReels; ++i) {
         reelSpeed[i] = spinSpeed * (1.0f - i * 0.15f);
         snapPending[i] = false;
         reelStopping[i] = false;
         reelStopped[i] = false;
+        snapLerping[i] = false;
+        snapProgress[i] = 0.0f;
     }
 
     lastUpdateMs = millis();
+}
+
+void SlotMachineMaterial::PullLever() {
+    if (spinning || stopping) return;
+    ResetSpin();
+}
+
+void SlotMachineMaterial::SetLeverPulled(bool pulled) {
+    if (pulled && !leverLatched) {
+        PullLever();
+    }
+    leverLatched = pulled;
 }
 
 uint8_t SlotMachineMaterial::GetSymbol(uint8_t reelIndex, int8_t row) const {
@@ -170,11 +204,9 @@ void SlotMachineMaterial::Update() {
             stopStartMs = now;
             confettiActive = false;
             confettiTimer = 0.0f;
-        }
-    } else if (!stopping) {
-        spinTimer += delta;
-        if (spinTimer >= idlePause) {
-            ResetSpin();
+            // roll chance for forced win ahead of snapping so we can ease to it (20% => 1 in 5)
+            forceWinPlanned = (random(5) == 0);
+            forceWinSymbol = static_cast<uint8_t>(random(kSymbols));
         }
     }
 
@@ -188,11 +220,11 @@ void SlotMachineMaterial::Update() {
 
     bool allStopped = true;
     for (uint8_t i = 0; i < kReels; ++i) {
-        float targetSpeed = spinning ? reelSpeed[i] : reelSpeed[i];
-        reelOffset[i] += targetSpeed * delta;
+        float currentSpeed = reelSpeed[i];
+        reelOffset[i] += currentSpeed * delta;
         if (reelOffset[i] > 10000.0f) reelOffset[i] = fmodf(reelOffset[i], static_cast<float>(kSymbols));
 
-        if (stopping && !reelStopped[i]) {
+        if (stopping && !reelStopped[i] && !snapLerping[i]) {
             uint32_t reelStart = stopStartMs + static_cast<uint32_t>(i * (stopDelay * 1000.0f));
             if (now >= reelStart) {
                 reelStopping[i] = true;
@@ -209,10 +241,27 @@ void SlotMachineMaterial::Update() {
         }
 
         if (snapPending[i]) {
-            reelOffset[i] = roundf(reelOffset[i]);
             reelSpeed[i] = 0.0f;
-            reelStopped[i] = true;
             snapPending[i] = false;
+            snapLerping[i] = true;
+            snapProgress[i] = 0.0f;
+            snapStart[i] = reelOffset[i];
+            float naturalSnap = roundf(reelOffset[i]);
+            float target = naturalSnap;
+            if (forceWinPlanned) target = static_cast<float>(forceWinSymbol);
+            snapTarget[i] = target;
+        }
+
+        if (snapLerping[i]) {
+            snapProgress[i] += delta * 5.0f; // ~0.2s ease
+            float t = Clamp01(snapProgress[i]);
+            float ease = t * t * (3.0f - 2.0f * t); // smoothstep
+            reelOffset[i] = snapStart[i] + (snapTarget[i] - snapStart[i]) * ease;
+            if (t >= 1.0f) {
+                reelOffset[i] = snapTarget[i];
+                snapLerping[i] = false;
+                reelStopped[i] = true;
+            }
         }
 
         allStopped &= reelStopped[i];
@@ -226,17 +275,13 @@ void SlotMachineMaterial::Update() {
         uint8_t mid2 = GetSymbol(2, 0);
         bool matched = (mid0 == mid1 && mid1 == mid2);
         bool forcedWin = false;
-        if (!matched && random(10) == 0) {
-            uint8_t winSymbol = static_cast<uint8_t>(random(kSymbols));
-            for (uint8_t i = 0; i < kReels; ++i) {
-                reelOffset[i] = static_cast<float>(winSymbol);
-                reelStopped[i] = true;
-            }
-            mid0 = mid1 = mid2 = winSymbol;
+        if (!matched && forceWinPlanned) {
+            mid0 = mid1 = mid2 = forceWinSymbol;
             forcedWin = true;
         }
         confettiActive = matched || forcedWin;
         confettiTimer = confettiActive ? confettiDuration : 0.0f;
+        forceWinPlanned = false;
     }
 }
 
@@ -312,10 +357,11 @@ RGBColor SlotMachineMaterial::GetRGB(const Vector3D& position, const Vector3D& /
                         static_cast<uint32_t>((int32_t)(relative.Y * 13.0f) * 19349663u) ^
                         (t * 2654435761u);
         float flash = ((seed >> 24) & 0xFF) / 255.0f;
-        if (flash > 0.82f) {
-            uint8_t idx = seed & 5u;
+        if (flash > 0.6f) { // denser, more chaotic
+            uint8_t idx = seed % 6u;
             RGBColor c = symbolColors[idx];
             float alpha = Clamp01(confettiTimer / confettiDuration);
+            alpha = 0.6f + alpha * 0.8f; // boost brightness
             return RGBColor(uint8_t(c.R * alpha), uint8_t(c.G * alpha), uint8_t(c.B * alpha));
         }
     }

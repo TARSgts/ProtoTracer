@@ -61,6 +61,12 @@ public:
     Node* Intersect(const Vector2D& p);
 
     /**
+     * @brief Preallocates space for triangle pointers in the root node to avoid repeated reallocations.
+     * @param entityCapacity Expected number of entities to store.
+     */
+    void Reserve(uint16_t entityCapacity);
+
+    /**
      * @brief Rebuilds the quadtree, recalculating all spatial partitions.
      */
     void Rebuild();

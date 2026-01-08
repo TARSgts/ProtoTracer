@@ -5,15 +5,27 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceSA, offsetFaceIndSA, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceARG, offsetFaceIndARG, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceOSC, offsetFaceIndOSC, 40, 0.0f, 1.0f);
+#ifdef ENABLE_SORTING_FACE
     eEA.AddParameter(&offsetFaceSort, offsetFaceIndSort, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_PONG_FACE
     eEA.AddParameter(&offsetFacePong, offsetFaceIndPong, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
     eEA.AddParameter(&offsetFaceInvaders, offsetFaceIndInvaders, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
     eEA.AddParameter(&offsetFaceFlappy, offsetFaceIndFlappy, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SNAKE_FACE
     eEA.AddParameter(&offsetFaceSnake, offsetFaceIndSnake, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    eEA.AddParameter(&offsetFaceLife, offsetFaceIndLife, 40, 0.0f, 1.0f);
+#endif
     eEA.AddParameter(&offsetFacePacman, offsetFaceIndPacman, 40, 0.0f, 1.0f);
+#ifdef ENABLE_SLOT_MACHINE_FACE
     eEA.AddParameter(&offsetFaceSlot, offsetFaceIndSlot, 40, 0.0f, 1.0f);
-#ifdef ENABLE_BAD_APPLE_FACE
-    eEA.AddParameter(&offsetFaceBadApple, offsetFaceIndBadApple, 40, 0.0f, 1.0f);
 #endif
 }
 
@@ -37,15 +49,27 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &sA, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
+#ifdef ENABLE_SORTING_FACE
     materialAnimator.AddMaterial(Material::Replace, &mergeSort, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_PONG_FACE
     materialAnimator.AddMaterial(Material::Replace, &pong, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
     materialAnimator.AddMaterial(Material::Replace, &spaceInvaders, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
     materialAnimator.AddMaterial(Material::Replace, &flappyBird, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SNAKE_FACE
     materialAnimator.AddMaterial(Material::Replace, &snake, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    materialAnimator.AddMaterial(Material::Replace, &gameOfLife, 20, 0.0f, 1.0f);
+#endif
     materialAnimator.AddMaterial(Material::Replace, &pacman, 20, 0.0f, 1.0f);
+#ifdef ENABLE_SLOT_MACHINE_FACE
     materialAnimator.AddMaterial(Material::Replace, &slotMachine, 20, 0.0f, 1.0f);
-#ifdef ENABLE_BAD_APPLE_FACE
-    materialAnimator.AddMaterial(Material::Replace, &badApple, 20, 0.0f, 1.0f);
 #endif
 
     backgroundMaterial.SetBaseMaterial(Material::Add, Menu::GetMaterial());
@@ -63,15 +87,27 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &sA, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
+#ifdef ENABLE_SORTING_FACE
     backgroundMaterial.AddMaterial(Material::Add, &mergeSort, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_PONG_FACE
     backgroundMaterial.AddMaterial(Material::Add, &pong, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
     backgroundMaterial.AddMaterial(Material::Add, &spaceInvaders, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
     backgroundMaterial.AddMaterial(Material::Add, &flappyBird, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_SNAKE_FACE
     backgroundMaterial.AddMaterial(Material::Add, &snake, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    backgroundMaterial.AddMaterial(Material::Add, &gameOfLife, 20, 0.0f, 1.0f);
+#endif
     backgroundMaterial.AddMaterial(Material::Add, &pacman, 20, 0.0f, 1.0f);
+#ifdef ENABLE_SLOT_MACHINE_FACE
     backgroundMaterial.AddMaterial(Material::Add, &slotMachine, 20, 0.0f, 1.0f);
-#ifdef ENABLE_BAD_APPLE_FACE
-    backgroundMaterial.AddMaterial(Material::Add, &badApple, 20, 0.0f, 1.0f);
 #endif
 }
 
@@ -301,7 +337,9 @@ void ProtogenProject::UpdateFace(float ratio) {
         boopHoldStartMs = 0;
     }
 
-    hud.SetEffect(Menu::GetEffect());// Pull Effect from menu and store reference in hud for observing data
+    Effect* activeEffect = faceEffectOverride ? faceEffectOverride : Menu::GetEffect();
+    hud.SetEffect(activeEffect);// Pull Effect from menu and store reference in hud for observing data
+    faceEffectOverride = nullptr;
     hud.Update();
     this->scene.SetEffect(&hud);// Use HUD as effect for overlay/data extraction
 
@@ -357,9 +395,6 @@ void ProtogenProject::UpdateFace(float ratio) {
 
     objA.SetCameraMax(Vector2D(xMaxCamera, cameraSize.Y - cameraSize.Y * offsetFace).Multiply(scale));
 
-#ifdef ENABLE_BAD_APPLE_FACE
-    ApplyBadAppleUsage();
-#endif
 }
 
 
@@ -659,19 +694,6 @@ void ProtogenProject::AddBackgroundMaterialFrame(Material& material, float opaci
     backgroundMaterial.AddMaterialFrame(material, opacity);
 }
 
-#ifdef ENABLE_BAD_APPLE_FACE
-void ProtogenProject::SetBadAppleActive(bool active) {
-    badApple.SetActive(active);
-}
-
-void ProtogenProject::ResetBadAppleUsage() {
-    badAppleUsedThisFrame = false;
-}
-
-void ProtogenProject::ApplyBadAppleUsage() {
-    SetBadAppleActive(badAppleUsedThisFrame);
-}
-#endif
 
 void ProtogenProject::SpectrumAnalyzerFace(){
     sA.Update(MicrophoneFourier::GetWaveform());
@@ -709,6 +731,7 @@ void ProtogenProject::OscilloscopeFace(){
     OscilloscopeCallback();
 }
 
+#ifdef ENABLE_SORTING_FACE
 void ProtogenProject::MergeSortFace(){
     mergeSort.Update();
 
@@ -720,7 +743,9 @@ void ProtogenProject::MergeSortFace(){
 
     MergeSortCallback();
 }
+#endif
 
+#ifdef ENABLE_PONG_FACE
 void ProtogenProject::PongAutoFace(){
     pong.Update();
 
@@ -730,7 +755,9 @@ void ProtogenProject::PongAutoFace(){
     materialAnimator.AddMaterialFrame(pong, offsetFacePong);
     backgroundMaterial.AddMaterialFrame(pong, offsetFacePong);
 }
+#endif
 
+#ifdef ENABLE_SPACE_INVADERS_FACE
 void ProtogenProject::SpaceInvadersAutoFace(){
     spaceInvaders.Update();
 
@@ -740,7 +767,9 @@ void ProtogenProject::SpaceInvadersAutoFace(){
     materialAnimator.AddMaterialFrame(spaceInvaders, offsetFaceInvaders);
     backgroundMaterial.AddMaterialFrame(spaceInvaders, offsetFaceInvaders);
 }
+#endif
 
+#ifdef ENABLE_FLAPPY_BIRD_FACE
 void ProtogenProject::FlappyBirdAutoFace(){
     flappyBird.Update();
 
@@ -750,7 +779,9 @@ void ProtogenProject::FlappyBirdAutoFace(){
     materialAnimator.AddMaterialFrame(flappyBird, offsetFaceFlappy);
     backgroundMaterial.AddMaterialFrame(flappyBird, offsetFaceFlappy);
 }
+#endif
 
+#ifdef ENABLE_SNAKE_FACE
 void ProtogenProject::SnakeAutoFace(){
     snake.Update();
 
@@ -760,6 +791,22 @@ void ProtogenProject::SnakeAutoFace(){
     materialAnimator.AddMaterialFrame(snake, offsetFaceSnake);
     backgroundMaterial.AddMaterialFrame(snake, offsetFaceSnake);
 }
+#endif
+
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+void ProtogenProject::GameOfLifeAutoFace(){
+    gameOfLife.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndLife, 1.0f);
+
+    gameOfLifeEffectChain.SetEffects(&gameOfLifeEffect, Menu::GetEffect());
+    faceEffectOverride = &gameOfLifeEffectChain;
+
+    materialAnimator.AddMaterialFrame(gameOfLife, offsetFaceLife);
+    backgroundMaterial.AddMaterialFrame(gameOfLife, offsetFaceLife);
+}
+#endif
 
 void ProtogenProject::PacmanAutoFace(){
     pacman.Update();
@@ -771,7 +818,9 @@ void ProtogenProject::PacmanAutoFace(){
     backgroundMaterial.AddMaterialFrame(pacman, offsetFacePacman);
 }
 
+#ifdef ENABLE_SLOT_MACHINE_FACE
 void ProtogenProject::SlotMachineAutoFace(){
+    slotMachine.SetLeverPulled(IsBooped());
     slotMachine.Update();
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
@@ -780,20 +829,8 @@ void ProtogenProject::SlotMachineAutoFace(){
     materialAnimator.AddMaterialFrame(slotMachine, offsetFaceSlot);
     backgroundMaterial.AddMaterialFrame(slotMachine, offsetFaceSlot);
 }
-
-#ifdef ENABLE_BAD_APPLE_FACE
-void ProtogenProject::BadAppleFace(){
-    badAppleUsedThisFrame = true;
-    SetBadAppleActive(true);
-    badApple.Update();
-
-    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
-    eEA.AddParameterFrame(offsetFaceIndBadApple, 1.0f);
-
-    materialAnimator.AddMaterialFrame(badApple, offsetFaceBadApple);
-    backgroundMaterial.AddMaterialFrame(badApple, offsetFaceBadApple);
-}
 #endif
+
 
 void ProtogenProject::HideFace(){
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
@@ -887,24 +924,36 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 
     oSC.SetSize(analyzerSize);
     oSC.SetPosition(analyzerPosition);
+#ifdef ENABLE_SORTING_FACE
     mergeSort.SetSize(analyzerSize);
     mergeSort.SetPosition(analyzerPosition);
     mergeSort.SetColumnRandomRange(12, 28);
+#endif
+#ifdef ENABLE_PONG_FACE
     pong.SetSize(analyzerSize);
     pong.SetPosition(analyzerPosition);
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
     spaceInvaders.SetSize(analyzerSize);
     spaceInvaders.SetPosition(analyzerPosition);
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
     flappyBird.SetSize(analyzerSize);
     flappyBird.SetPosition(analyzerPosition);
+#endif
+#ifdef ENABLE_SNAKE_FACE
     snake.SetSize(analyzerSize);
     snake.SetPosition(analyzerPosition);
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    gameOfLife.SetSize(analyzerSize);
+    gameOfLife.SetPosition(analyzerPosition);
+#endif
     pacman.SetSize(analyzerSize);
     pacman.SetPosition(analyzerPosition);
+#ifdef ENABLE_SLOT_MACHINE_FACE
     slotMachine.SetSize(analyzerSize);
     slotMachine.SetPosition(analyzerPosition);
-#ifdef ENABLE_BAD_APPLE_FACE
-    badApple.SetSize(cameraSize);
-    badApple.SetPosition(cameraSize.Divide(2.0f));
 #endif
 
     hud.SetFaceMax(camMax);

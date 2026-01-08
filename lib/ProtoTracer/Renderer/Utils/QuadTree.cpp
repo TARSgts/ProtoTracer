@@ -26,6 +26,10 @@ Node* QuadTree::Intersect(const Vector2D& p) {
     return Intersect(&root, p);
 }
 
+void QuadTree::Reserve(uint16_t entityCapacity) {
+    root.Expand(entityCapacity);
+}
+
 void QuadTree::Rebuild() {
     root.Subdivide();
 }

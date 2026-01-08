@@ -16,6 +16,31 @@
 
 class BetaProject : public ProtogenProject {
 private:
+    static constexpr uint8_t kBaseFaceCount = 13;
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    static constexpr uint8_t kFlappyFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterFlappyFaceIndex = kBaseFaceCount + 1;
+#else
+    static constexpr uint8_t kAfterFlappyFaceIndex = kBaseFaceCount;
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    static constexpr uint8_t kSnakeFaceIndex = kAfterFlappyFaceIndex;
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex;
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    static constexpr uint8_t kLifeFaceIndex = kAfterSnakeFaceIndex;
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex;
+#endif
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    static constexpr uint8_t kSlotFaceIndex = kAfterLifeFaceIndex;
+    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex + 1;
+#else
+    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex;
+#endif
     WS35BetaCameraManager cameras;
     WS35BetaController controller = WS35BetaController(&cameras, 50);
     BetaFront pM;
@@ -29,11 +54,20 @@ private:
     FunctionGenerator fGen2 = FunctionGenerator(FunctionGenerator::Sine, -1.0f, 1.0f, 7.7f);
     FunctionGenerator fGen3 = FunctionGenerator(FunctionGenerator::Sine, -7.5f, 7.5f, 2.9f);
     
-    #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[17] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("SLOT"), F("BADAPPLE")};
-    #else
-	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"), F("FLAPPY"), F("SNAKE"), F("SLOT")};
-    #endif
+	const __FlashStringHelper* faceArray[kFaceCount] = {F("DEFAULT"), F("SAD"), F("HEART"), F("DEAD"), F("ANGRY"), F("CRASH"), F("FRUSTRA"), F("DIZZY"), F("SHOCKED"), F("STANDBY"), F("GENTLE"), F("AUDIO1"), F("AUDIO2"),
+        #ifdef ENABLE_FLAPPY_BIRD_FACE
+        F("FLAPPY"),
+        #endif
+        #ifdef ENABLE_SNAKE_FACE
+        F("SNAKE"),
+        #endif
+        #ifdef ENABLE_GAME_OF_LIFE_FACE
+        F("LIFE"),
+        #endif
+        #ifdef ENABLE_SLOT_MACHINE_FACE
+        F("SLOT"),
+        #endif
+    };
 
     KeyFrameTrack<1, 10> botFinLR1 = KeyFrameTrack<1, 10>(0.0f, 1.0f, KeyFrameInterpolation::Cosine);
     KeyFrameTrack<1, 10> botFinLR2 = KeyFrameTrack<1, 10>(0.0f, 1.0f, KeyFrameInterpolation::Cosine);
@@ -297,13 +331,7 @@ private:
     }
 
 public:
-    BetaProject() : ProtogenProject(&cameras, &controller, 4, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
-        #ifdef ENABLE_BAD_APPLE_FACE
-        17
-        #else
-        16
-        #endif
-    ){
+    BetaProject() : ProtogenProject(&cameras, &controller, 4, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23, kFaceCount){
         scene.AddObject(pM.GetObject());
         scene.AddObject(rear.GetObject());
         scene.AddObject(ledStripBackground.GetObject());
@@ -330,9 +358,6 @@ public:
     void Update(float ratio) override {
         pM.Reset();
         rear.Reset();
-#ifdef ENABLE_BAD_APPLE_FACE
-        ResetBadAppleUsage();
-#endif
         
         Menu::Update(ratio);
 
@@ -372,7 +397,11 @@ public:
     }
     
     void SelectFace(uint8_t code) {
-        if (IsBooped()) {
+        if (IsBooped()
+#ifdef ENABLE_SLOT_MACHINE_FACE
+            && code != kSlotFaceIndex
+#endif
+        ) {
             OwO();
             return;
         }
@@ -391,11 +420,17 @@ public:
             case 10: Gentle();      break;
             case 11: AudioReactiveGradientFace();   break;
             case 12: OscilloscopeFace();            break;
-            case 13: FlappyBirdAutoFace();          break;
-            case 14: SnakeAutoFace();               break;
-            case 15: SlotMachineAutoFace();         break;
-            #ifdef ENABLE_BAD_APPLE_FACE
-            case 16: BadAppleFace();                break;
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+            case kFlappyFaceIndex: FlappyBirdAutoFace(); break;
+#endif
+#ifdef ENABLE_SNAKE_FACE
+            case kSnakeFaceIndex: SnakeAutoFace();       break;
+#endif
+            #ifdef ENABLE_GAME_OF_LIFE_FACE
+            case kLifeFaceIndex: GameOfLifeAutoFace();          break;
+            #endif
+            #ifdef ENABLE_SLOT_MACHINE_FACE
+            case kSlotFaceIndex: SlotMachineAutoFace();         break;
             #endif
             default: SpectrumAnalyzerFace();        break;
         }

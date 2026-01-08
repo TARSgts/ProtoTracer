@@ -30,23 +30,30 @@
 #include "../../Scene/Materials/Animated/SpectrumAnalyzer.h"
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
+#ifdef ENABLE_SORTING_FACE
 #include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
+#endif
+#ifdef ENABLE_PONG_FACE
 #include "../../Scene/Materials/Animated/Pong.h"
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
 #include "../../Scene/Materials/Animated/SpaceInvaders.h"
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
 #include "../../Scene/Materials/Animated/FlappyBird.h"
+#endif
+#ifdef ENABLE_SNAKE_FACE
 #include "../../Scene/Materials/Animated/Snake.h"
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+#include "../../Scene/Materials/Animated/GameOfLife.h"
+#include "../../Scene/Screenspace/EffectChain.h"
+#include "../../Scene/Screenspace/GameOfLifeEffect.h"
+#endif
 #include "../../Scene/Materials/Animated/Pacman.h"
+#ifdef ENABLE_SLOT_MACHINE_FACE
 #include "../../Scene/Materials/Animated/SlotMachine.h"
-#ifdef ENABLE_BAD_APPLE_FACE
-#ifdef BAD_APPLE_SD_STREAM
-#include "../../Assets/Textures/Animated/BapleFullSD.h"
-#elif defined(BAD_APPLE_BW_64X32)
-#include "../../Assets/Textures/Animated/BadAppleBW64x32.h"
-#else
-#include "../../Assets/Textures/Animated/BapleFull.h"
 #endif
-#endif
-
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
 #include "../../Utils/Signals/FunctionGenerator.h"
 #include "../../ExternalDevices/Sensors/Microphone/Utils/FFTVoiceDetection.h"
@@ -173,23 +180,28 @@ private:
     SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), true, true); 
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
+#ifdef ENABLE_SORTING_FACE
     MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
-    PongFace pong = PongFace(Vector2D(200, 100), Vector2D(0, 0));
-    SpaceInvadersMaterial spaceInvaders = SpaceInvadersMaterial(Vector2D(200, 100), Vector2D(0, 0));
-    FlappyBirdMaterial flappyBird = FlappyBirdMaterial(Vector2D(200, 100), Vector2D(0, 0));
-    SnakeMaterial snake = SnakeMaterial(Vector2D(200, 100), Vector2D(0, 0));
-    PacmanMaterial pacman = PacmanMaterial(Vector2D(200, 100), Vector2D(0, 0));
-    SlotMachineMaterial slotMachine = SlotMachineMaterial(Vector2D(200, 100), Vector2D(0, 0));
-#ifdef ENABLE_BAD_APPLE_FACE
-    #ifdef BAD_APPLE_SD_STREAM
-    BapleFullSequenceSD badApple = BapleFullSequenceSD("/BAPLE.BIN", Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
-    #elif defined(BAD_APPLE_BW_64X32)
-    BadAppleSequence badApple = BadAppleSequence(Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
-    #else
-    BapleFullSequence badApple = BapleFullSequence(Vector2D(192.0f, 105.0f), Vector2D(96.0f, 52.5f), 18.0f);
-    #endif
 #endif
-
+#ifdef ENABLE_PONG_FACE
+    PongFace pong = PongFace(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+    SpaceInvadersMaterial spaceInvaders = SpaceInvadersMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    FlappyBirdMaterial flappyBird = FlappyBirdMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    SnakeMaterial snake = SnakeMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    GameOfLifeMaterial gameOfLife = GameOfLifeMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+    PacmanMaterial pacman = PacmanMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    SlotMachineMaterial slotMachine = SlotMachineMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
     // --- Project controllers ---
     BlinkTrack<2> blink; ///< Blink track handler.
 
@@ -236,33 +248,54 @@ private:
     float offsetFaceSA  = 0.0f;  ///< Offset for SpectrumAnalyzer face.
     float offsetFaceARG = 0.0f;  ///< Offset for AudioReactiveGradient face.
     float offsetFaceOSC = 0.0f;  ///< Offset for Oscilloscope face.
+#ifdef ENABLE_SORTING_FACE
     float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
-    float offsetFacePong = 0.0f; ///< Offset for Pong face.
-    float offsetFaceInvaders = 0.0f; ///< Offset for Space Invaders face.
-    float offsetFaceFlappy = 0.0f; ///< Offset for Flappy Bird face.
-    float offsetFaceSnake = 0.0f; ///< Offset for Snake face.
-    float offsetFacePacman = 0.0f; ///< Offset for Pacman face.
-    float offsetFaceSlot = 0.0f; ///< Offset for Slot Machine face.
-#ifdef ENABLE_BAD_APPLE_FACE
-    float offsetFaceBadApple = 0.0f; ///< Offset for Bad Apple face.
-    bool badAppleUsedThisFrame = false;
 #endif
-
+#ifdef ENABLE_PONG_FACE
+    float offsetFacePong = 0.0f; ///< Offset for Pong face.
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+    float offsetFaceInvaders = 0.0f; ///< Offset for Space Invaders face.
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    float offsetFaceFlappy = 0.0f; ///< Offset for Flappy Bird face.
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    float offsetFaceSnake = 0.0f; ///< Offset for Snake face.
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    float offsetFaceLife = 0.0f; ///< Offset for Game of Life face.
+#endif
+    float offsetFacePacman = 0.0f; ///< Offset for Pacman face.
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    float offsetFaceSlot = 0.0f; ///< Offset for Slot Machine face.
+#endif
     uint8_t offsetFaceInd    = 50; ///< Index for generic face offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSA  = 51; ///< Index for SpectrumAnalyzer offset in EasyEaseAnimator.
     uint8_t offsetFaceIndARG = 52; ///< Index for AudioReactiveGradient offset in EasyEaseAnimator.
     uint8_t offsetFaceIndOSC = 53; ///< Index for Oscilloscope offset in EasyEaseAnimator.
+#ifdef ENABLE_SORTING_FACE
     uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndPong = 56; ///< Index for Pong offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndInvaders = 57; ///< Index for Space Invaders offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndFlappy = 58; ///< Index for Flappy Bird offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndSnake = 59; ///< Index for Snake offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndPacman = 60; ///< Index for Pacman offset in EasyEaseAnimator.
-    uint8_t offsetFaceIndSlot = 61; ///< Index for Slot Machine offset in EasyEaseAnimator.
-#ifdef ENABLE_BAD_APPLE_FACE
-    uint8_t offsetFaceIndBadApple = 55; ///< Index for Bad Apple offset in EasyEaseAnimator.
 #endif
-
+#ifdef ENABLE_PONG_FACE
+    uint8_t offsetFaceIndPong = 56; ///< Index for Pong offset in EasyEaseAnimator.
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+    uint8_t offsetFaceIndInvaders = 57; ///< Index for Space Invaders offset in EasyEaseAnimator.
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    uint8_t offsetFaceIndFlappy = 58; ///< Index for Flappy Bird offset in EasyEaseAnimator.
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    uint8_t offsetFaceIndSnake = 59; ///< Index for Snake offset in EasyEaseAnimator.
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    uint8_t offsetFaceIndLife = 62; ///< Index for Game of Life offset in EasyEaseAnimator.
+#endif
+    uint8_t offsetFaceIndPacman = 60; ///< Index for Pacman offset in EasyEaseAnimator.
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    uint8_t offsetFaceIndSlot = 61; ///< Index for Slot Machine offset in EasyEaseAnimator.
+#endif
     /**
      * @brief Links internal parameters to the EasyEaseAnimator or other controllers.
      */
@@ -298,6 +331,7 @@ private:
      * @brief A TimeStep object to limit frames (e.g., to 120 FPS).
      */
     TimeStep frameLimiter = TimeStep(120);
+    Effect* faceEffectOverride = nullptr;
 
 protected:
     /**
@@ -309,6 +343,10 @@ protected:
      * @brief Heads-up display (HUD) for the face overlay or additional data.
      */
     HeadsUpDisplay hud = HeadsUpDisplay(Vector2D(0.0f, 0.0f), Vector2D(192.0f, 96.0f));
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    GameOfLifeEffect gameOfLifeEffect;
+    EffectChain gameOfLifeEffectChain;
+#endif
 
     /**
      * @brief Links external or user-defined control parameters (pure virtual to be implemented).
@@ -320,10 +358,6 @@ protected:
      * @param ratio A normalized ratio (0.0f to 1.0f) often used in animation phases.
      */
     void UpdateFace(float ratio);
-#ifdef ENABLE_BAD_APPLE_FACE
-    void ResetBadAppleUsage();
-    void ApplyBadAppleUsage();
-#endif
 #ifdef ENABLE_FACE_COLOR_STRIP
     void UpdateFaceColorStrip(float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
     void ApplyFaceStripColor(Color color, float ratio, const RGBColor& hueFront, const RGBColor& hueBack);
@@ -625,14 +659,6 @@ protected:
     void AddBackgroundMaterialFrame(Material& material, float opacity = 1.0f);
 
     /**
-     * @brief Enables/disables the Bad Apple material so it only accesses SD when active.
-     * @param active True to enable streaming, false to pause and render black.
-     */
-#ifdef ENABLE_BAD_APPLE_FACE
-    void SetBadAppleActive(bool active);
-#endif
-
-    /**
      * @brief Enables the Spectrum Analyzer on the face, updating offsets and calling callbacks.
      */
     void SpectrumAnalyzerFace();
@@ -647,46 +673,58 @@ protected:
      */
     void OscilloscopeFace();
 
+#ifdef ENABLE_SORTING_FACE
     /**
      * @brief Enables the merge sort visualizer face.
      */
     void MergeSortFace();
+#endif
 
+#ifdef ENABLE_PONG_FACE
     /**
      * @brief Enables the Pong auto-play face.
      */
     void PongAutoFace();
+#endif
 
+#ifdef ENABLE_SPACE_INVADERS_FACE
     /**
      * @brief Enables the Space Invaders auto-play face.
      */
     void SpaceInvadersAutoFace();
+#endif
 
+#ifdef ENABLE_FLAPPY_BIRD_FACE
     /**
      * @brief Enables the Flappy Bird auto-play face.
      */
     void FlappyBirdAutoFace();
+#endif
 
+#ifdef ENABLE_SNAKE_FACE
     /**
      * @brief Enables the Snake auto-play face.
      */
     void SnakeAutoFace();
+#endif
+
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    /**
+     * @brief Enables the Game of Life auto-play face.
+     */
+    void GameOfLifeAutoFace();
+#endif
 
     /**
      * @brief Enables the Pacman auto-play face.
      */
     void PacmanAutoFace();
 
+#ifdef ENABLE_SLOT_MACHINE_FACE
     /**
      * @brief Enables the Slot Machine auto-play face.
      */
     void SlotMachineAutoFace();
-
-    /**
-     * @brief Enables the Bad Apple animated face.
-     */
-#ifdef ENABLE_BAD_APPLE_FACE
-    void BadAppleFace();
 #endif
 
     /**

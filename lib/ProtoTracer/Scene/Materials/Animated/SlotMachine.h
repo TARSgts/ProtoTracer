@@ -16,6 +16,10 @@ private:
     bool snapPending[kReels] = {false, false, false};
     bool reelStopping[kReels] = {false, false, false};
     bool reelStopped[kReels] = {false, false, false};
+    bool snapLerping[kReels] = {false, false, false};
+    float snapStart[kReels] = {0.0f, 0.0f, 0.0f};
+    float snapTarget[kReels] = {0.0f, 0.0f, 0.0f};
+    float snapProgress[kReels] = {0.0f, 0.0f, 0.0f};
 
     float baseSpeed = 2.5f;
     float spinSpeed = 9.5f;
@@ -24,6 +28,7 @@ private:
     float idlePause = 5.0f;
     bool spinning = true;
     bool stopping = false;
+    bool leverLatched = false;
     uint32_t stopStartMs = 0;
     float stopDelay = 1.0f;
     float stopMinSpeed = 0.35f;
@@ -40,7 +45,9 @@ private:
 
     bool confettiActive = false;
     float confettiTimer = 0.0f;
-    float confettiDuration = 1.5f;
+    float confettiDuration = 3.0f;
+    bool forceWinPlanned = false;
+    uint8_t forceWinSymbol = 0;
 
     RGBColor backgroundColor = RGBColor(0, 0, 0);
     RGBColor frameColor = RGBColor(205, 205, 215);
@@ -55,6 +62,7 @@ private:
 
     void RecalculateDimensions();
     void ResetSpin();
+    void PullLever();
     uint8_t GetSymbol(uint8_t reelIndex, int8_t row) const;
 
 public:
@@ -62,6 +70,7 @@ public:
 
     void SetSize(Vector2D dimensions);
     void SetPosition(Vector2D center);
+    void SetLeverPulled(bool pulled);
     void Update();
 
     RGBColor GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) override;

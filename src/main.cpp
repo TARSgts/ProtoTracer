@@ -17,23 +17,24 @@
  * @author Coela Can't
  */
 
+#include <Arduino.h>
 #include "Examples/UserConfiguration.h"
 
 #if defined(PROJECT_PROTOGEN_HUB75)
     #include "Examples/Protogen/ProtogenHUB75Project.h"
-    ProtogenHUB75Project project; ///< Instance of the Protogen HUB75 project.
+    DMAMEM ProtogenHUB75Project project; ///< Instance of the Protogen HUB75 project stored in RAM2 to free main RAM.
 
 #elif defined(PROJECT_PROTOGEN_WS35)
     #include "Examples/Protogen/ProtogenWS35Project.h"
-    ProtogenWS35Project project; ///< Instance of the Protogen WS35 project.
+    DMAMEM ProtogenWS35Project project; ///< Instance of the Protogen WS35 project stored in RAM2 to free main RAM.
 
 #elif defined(PROJECT_PROTOGEN_BETA)
     #include "Examples/Protogen/BetaProject.h"
-    BetaProject project; ///< Instance of the Beta project.
+    DMAMEM BetaProject project; ///< Instance of the Beta project stored in RAM2 to free main RAM.
 
 #elif defined(PROJECT_VERIFY_ENGINE)
     #include "Examples/VerifyEngine.h"
-    VerifyEngine project; ///< Instance of the Verify Engine project.
+    DMAMEM VerifyEngine project; ///< Instance of the Verify Engine project stored in RAM2 to free main RAM.
 
 #elif defined(PROJECT_VERIFY_HARDWARE)
     #include "Examples/Protogen/ProtogenHardwareTest.h"

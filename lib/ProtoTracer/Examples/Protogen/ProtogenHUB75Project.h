@@ -28,23 +28,54 @@ private:
     enum class DvdRenderMode { Sprite, Mesh, Cube };
     // Render the real DVD logo sprite by default (falls back to cube/mesh via kDvdRenderMode).
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
-    static constexpr uint8_t kFaceCount =
-        #if defined(ENABLE_BAD_APPLE_FACE) && defined(ENABLE_GIF_FACE)
-        18
-        #elif defined(ENABLE_BAD_APPLE_FACE) || defined(ENABLE_GIF_FACE)
-        17
-        #else
-        16
-        #endif
-    ;
-    static constexpr uint8_t kSlotFaceIndex = 15;
-#ifdef ENABLE_BAD_APPLE_FACE
-    static constexpr uint8_t kBadAppleFaceIndex = 16;
+    static constexpr uint8_t kBaseFaceCount = 10;
+#ifdef ENABLE_SORTING_FACE
+    static constexpr uint8_t kSortFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterSortFaceIndex = kBaseFaceCount + 1;
+#else
+    static constexpr uint8_t kAfterSortFaceIndex = kBaseFaceCount;
 #endif
-#if defined(ENABLE_GIF_FACE) && defined(ENABLE_BAD_APPLE_FACE)
-    static constexpr uint8_t kGifFaceIndex = 17;
-#elif defined(ENABLE_GIF_FACE)
-    static constexpr uint8_t kGifFaceIndex = 16;
+#ifdef ENABLE_PONG_FACE
+    static constexpr uint8_t kPongFaceIndex = kAfterSortFaceIndex;
+    static constexpr uint8_t kAfterPongFaceIndex = kAfterSortFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterPongFaceIndex = kAfterSortFaceIndex;
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+    static constexpr uint8_t kInvaderFaceIndex = kAfterPongFaceIndex;
+    static constexpr uint8_t kAfterInvaderFaceIndex = kAfterPongFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterInvaderFaceIndex = kAfterPongFaceIndex;
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    static constexpr uint8_t kFlappyFaceIndex = kAfterInvaderFaceIndex;
+    static constexpr uint8_t kAfterFlappyFaceIndex = kAfterInvaderFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterFlappyFaceIndex = kAfterInvaderFaceIndex;
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    static constexpr uint8_t kSnakeFaceIndex = kAfterFlappyFaceIndex;
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex;
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    static constexpr uint8_t kLifeFaceIndex = kAfterSnakeFaceIndex;
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex;
+#endif
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    static constexpr uint8_t kSlotFaceIndex = kAfterLifeFaceIndex;
+    static constexpr uint8_t kAfterSlotFaceIndex = kAfterLifeFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterSlotFaceIndex = kAfterLifeFaceIndex;
+#endif
+#ifdef ENABLE_GIF_FACE
+    static constexpr uint8_t kGifFaceIndex = kAfterSlotFaceIndex;
+    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex + 1;
+#else
+    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex;
 #endif
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
     HUB75DeltaCameraManager cameras;
@@ -105,17 +136,29 @@ private:
         F("OSCIL"),
         F("SPECTRUM"),
         F("DVDLOGO"),
+        #ifdef ENABLE_SORTING_FACE
         F("MERGESRT"),
+        #endif
+        #ifdef ENABLE_PONG_FACE
         F("PONG"),
+        #endif
+        #ifdef ENABLE_SPACE_INVADERS_FACE
         F("INVADER"),
+        #endif
+        #ifdef ENABLE_FLAPPY_BIRD_FACE
         F("FLAPPY"),
+        #endif
+        #ifdef ENABLE_SNAKE_FACE
         F("SNAKE"),
-        F("SLOT")
-        #ifdef ENABLE_BAD_APPLE_FACE
-        ,F("BADAPPLE")
+        #endif
+        #ifdef ENABLE_GAME_OF_LIFE_FACE
+        F("LIFE"),
+        #endif
+        #ifdef ENABLE_SLOT_MACHINE_FACE
+        F("SLOT"),
         #endif
         #ifdef ENABLE_GIF_FACE
-        ,F("GIF")
+        F("GIF"),
         #endif
     };
 
@@ -493,9 +536,7 @@ public:
         GetDvdObject()->Disable();
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
-#ifdef ENABLE_BAD_APPLE_FACE
-        ResetBadAppleUsage();
-#endif
+        bool gifDecoding = false;
 #ifdef ENABLE_GIF_FACE
         gifFaceActive = false;
 #endif
@@ -524,7 +565,7 @@ public:
         if (gifFaceActive) {
             gifPlayer.Update();
         }
-        const bool gifDecoding = gifFaceActive && gifPlayer.IsDecoding();
+        gifDecoding = gifFaceActive && gifPlayer.IsDecoding();
         if (gifDecoding) {
             pM.GetObject()->Disable();
         }
@@ -542,7 +583,9 @@ public:
                 pM.GetObject()->GetTransform()->SetPosition(GetWiggleOffset());
                 pM.GetObject()->UpdateTransform();
             }
-        } else {
+        }
+#ifdef ENABLE_GIF_FACE
+        else {
             // If GIF face is selected but decoding has stopped (end of GIF), advance to next face.
             if (gifFaceActive && !gifPlayer.IsDecoding()) {
                 uint8_t nextFace = Menu::GetFaceState() + 1;
@@ -553,11 +596,16 @@ public:
                 gifFaceActive = false;
             }
         }
+#endif
     }
 
     void SelectFace(uint8_t code) {
         ClearStripColorOverride();
-        if (IsBooped() && code != 6 && code != 9) {
+        if (IsBooped() && code != 6 && code != 9
+#ifdef ENABLE_SLOT_MACHINE_FACE
+            && code != kSlotFaceIndex
+#endif
+        ) {
             Surprised();
             return;
         }
@@ -573,14 +621,26 @@ public:
             case 7: OscilloscopeFace();             break;
             case 8: SpectrumAnalyzerFace();         break;
             case 9: DVDLogoFace(0.0f);              break;
-            case 10: MergeSortFace();               break;
-            case 11: PongAutoFace();                break;
-            case 12: SpaceInvadersAutoFace();       break;
-            case 13: FlappyBirdAutoFace();          break;
-            case 14: SnakeAutoFace();               break;
+#ifdef ENABLE_SORTING_FACE
+            case kSortFaceIndex: MergeSortFace();   break;
+#endif
+#ifdef ENABLE_PONG_FACE
+            case kPongFaceIndex: PongAutoFace();    break;
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+            case kInvaderFaceIndex: SpaceInvadersAutoFace(); break;
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+            case kFlappyFaceIndex: FlappyBirdAutoFace();     break;
+#endif
+#ifdef ENABLE_SNAKE_FACE
+            case kSnakeFaceIndex: SnakeAutoFace();  break;
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+            case kLifeFaceIndex: GameOfLifeAutoFace();  break;
+#endif
+#ifdef ENABLE_SLOT_MACHINE_FACE
             case kSlotFaceIndex: SlotMachineAutoFace(); break;
-#ifdef ENABLE_BAD_APPLE_FACE
-            case kBadAppleFaceIndex: BadAppleFace();    break;
 #endif
 #ifdef ENABLE_GIF_FACE
             case kGifFaceIndex: GifFace();              break;
@@ -603,7 +663,9 @@ public:
             case 19: Sad();         break; // [S]ad
             case 21: LookUp();      break; // Look [U]p
             case 22: LookDown();    break; // Look [V] Down
+#ifdef ENABLE_SORTING_FACE
             case 13: MergeSortFace(); break; // [M] Merge sort
+#endif
             case 24: AudioReactiveGradientFace();   break; // [X] X.X
             case 25: OscilloscopeFace();            break; // [Y] Oscilloscope
             case 26: SpectrumAnalyzerFace();        break; // [Z] Spectrum

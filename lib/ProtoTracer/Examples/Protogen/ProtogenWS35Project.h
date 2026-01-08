@@ -19,6 +19,43 @@ private:
     enum class DvdRenderMode { Sprite, Mesh, Cube };
     // Use the sprite-based render path by default (switch to Cube/Mesh if you need to debug geometry).
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
+    static constexpr uint8_t kBaseFaceCount = 10;
+#ifdef ENABLE_PONG_FACE
+    static constexpr uint8_t kPongFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterPongFaceIndex = kBaseFaceCount + 1;
+#else
+    static constexpr uint8_t kAfterPongFaceIndex = kBaseFaceCount;
+#endif
+#ifdef ENABLE_SPACE_INVADERS_FACE
+    static constexpr uint8_t kInvaderFaceIndex = kAfterPongFaceIndex;
+    static constexpr uint8_t kAfterInvaderFaceIndex = kAfterPongFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterInvaderFaceIndex = kAfterPongFaceIndex;
+#endif
+#ifdef ENABLE_FLAPPY_BIRD_FACE
+    static constexpr uint8_t kFlappyFaceIndex = kAfterInvaderFaceIndex;
+    static constexpr uint8_t kAfterFlappyFaceIndex = kAfterInvaderFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterFlappyFaceIndex = kAfterInvaderFaceIndex;
+#endif
+#ifdef ENABLE_SNAKE_FACE
+    static constexpr uint8_t kSnakeFaceIndex = kAfterFlappyFaceIndex;
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterSnakeFaceIndex = kAfterFlappyFaceIndex;
+#endif
+#ifdef ENABLE_GAME_OF_LIFE_FACE
+    static constexpr uint8_t kLifeFaceIndex = kAfterSnakeFaceIndex;
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterLifeFaceIndex = kAfterSnakeFaceIndex;
+#endif
+#ifdef ENABLE_SLOT_MACHINE_FACE
+    static constexpr uint8_t kSlotFaceIndex = kAfterLifeFaceIndex;
+    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex + 1;
+#else
+    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex;
+#endif
     WS35SplitCameraManager cameras;
     WS35Controller controller = WS35Controller(&cameras, 50);
     NukudeFace pM;
@@ -57,11 +94,26 @@ private:
     };
     uint8_t dvdBouncePaletteIndex = 0;
     
-    #ifdef ENABLE_BAD_APPLE_FACE
-	const __FlashStringHelper* faceArray[16] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE"), F("SLOT"), F("BADAPPLE")};
-    #else
-	const __FlashStringHelper* faceArray[15] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"), F("PONG"), F("INVADER"), F("FLAPPY"), F("SNAKE"), F("SLOT")};
-    #endif
+	const __FlashStringHelper* faceArray[kFaceCount] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"),
+        #ifdef ENABLE_PONG_FACE
+        F("PONG"),
+        #endif
+        #ifdef ENABLE_SPACE_INVADERS_FACE
+        F("INVADER"),
+        #endif
+        #ifdef ENABLE_FLAPPY_BIRD_FACE
+        F("FLAPPY"),
+        #endif
+        #ifdef ENABLE_SNAKE_FACE
+        F("SNAKE"),
+        #endif
+        #ifdef ENABLE_GAME_OF_LIFE_FACE
+        F("LIFE"),
+        #endif
+        #ifdef ENABLE_SLOT_MACHINE_FACE
+        F("SLOT"),
+        #endif
+    };
 
     void LinkControlParameters() override {
         AddParameter(NukudeFace::Anger, pM.GetMorphWeightReference(NukudeFace::Anger), 15);
@@ -384,13 +436,7 @@ private:
     }
 
 public:
-    ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23,
-        #ifdef ENABLE_BAD_APPLE_FACE
-        16
-        #else
-        15
-        #endif
-    ){
+    ProtogenWS35Project() : ProtogenProject(&cameras, &controller, 2, Vector2D(), Vector2D(192.0f, 105.0f), 22, 23, kFaceCount){
         scene.AddObject(pM.GetObject());
         scene.AddObject(GetDvdObject()); // add early so we can toggle it on/off per face selection
         scene.AddObject(bsodQuad.GetObject());
@@ -423,9 +469,6 @@ public:
         GetDvdObject()->Disable();
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
-#ifdef ENABLE_BAD_APPLE_FACE
-        ResetBadAppleUsage();
-#endif
 
         ClearStripColorOverride();
         uint8_t mode = Menu::GetFaceState();//change by button press
@@ -433,7 +476,11 @@ public:
         controller.SetBrightness(Menu::GetBrightness());
         controller.SetAccentBrightness(Menu::GetAccentBrightness());
 
-        if (IsBooped() && mode != 6 && mode != 9){
+        if (IsBooped() && mode != 6 && mode != 9
+#ifdef ENABLE_SLOT_MACHINE_FACE
+            && mode != kSlotFaceIndex
+#endif
+        ){
             Surprised();
         }
         else{
@@ -458,26 +505,36 @@ public:
                 else if (mode == 9) {
                     DVDLogoFace(ratio);
                 }
-                else if (mode == 10) {
+                #ifdef ENABLE_PONG_FACE
+                else if (mode == kPongFaceIndex) {
                     PongAutoFace();
                 }
-                else if (mode == 11) {
+                #endif
+                #ifdef ENABLE_SPACE_INVADERS_FACE
+                else if (mode == kInvaderFaceIndex) {
                     SpaceInvadersAutoFace();
                 }
-                else if (mode == 12) {
+                #endif
+                #ifdef ENABLE_FLAPPY_BIRD_FACE
+                else if (mode == kFlappyFaceIndex) {
                     FlappyBirdAutoFace();
                 }
-                else if (mode == 13) {
+                #endif
+                #ifdef ENABLE_SNAKE_FACE
+                else if (mode == kSnakeFaceIndex) {
                     SnakeAutoFace();
                 }
-                else if (mode == 14) {
+                #endif
+                #ifdef ENABLE_GAME_OF_LIFE_FACE
+                else if (mode == kLifeFaceIndex) {
+                    GameOfLifeAutoFace();
+                }
+                #endif
+                #ifdef ENABLE_SLOT_MACHINE_FACE
+                else if (mode == kSlotFaceIndex) {
                     SlotMachineAutoFace();
                 }
-                #ifdef ENABLE_BAD_APPLE_FACE
-                else {
-                    BadAppleFace();
-                }
-                #endif 
+                #endif
             }
         }
 
