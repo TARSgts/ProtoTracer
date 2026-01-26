@@ -1,3 +1,5 @@
+THIS VERSION OF THE CODE IS MODIFIED AND MIGHT BE BROKEN
+
 # ProtoTracer: 3D Rendering and Animation Engine
 
 ProtoTracer is a real-time 3D rendering and animation engine designed for microcontrollers. While it has broad applicability, this is a project made for free and it will be down to you to customize support for other hardware other than the examples provided. Support for other microcontrollers may be possible through custom implementations, but users should be prepared to develop their own adaptations if working with platforms other than the Teensy 4/4.1.
