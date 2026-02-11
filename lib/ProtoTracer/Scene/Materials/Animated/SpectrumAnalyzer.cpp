@@ -87,13 +87,13 @@ void SpectrumAnalyzer::Update(float* readData) {
         return;
     }
 
-    constexpr float emphasisSlope = 0.3f;
-    constexpr float lowBinBoost = 1.32f;
-    constexpr float riseCoeff = 0.5f;
-    constexpr float fallCoeff = 0.16f;
-    constexpr float peakFall = 0.92f;
-    constexpr uint8_t peakHoldFrames = 24;
-    constexpr float holdTolerance = 0.01f;
+    constexpr float emphasisSlope = 0.22f;
+    constexpr float lowBinBoost = 1.18f;
+    constexpr float riseCoeff = 0.58f;
+    constexpr float fallCoeff = 0.18f;
+    constexpr float peakFall = 0.90f;
+    constexpr uint8_t peakHoldFrames = 14;
+    constexpr float holdTolerance = 0.008f;
 
     float peak = 0.0f;
     float noiseAccumulator = 0.0f;
@@ -157,22 +157,33 @@ void SpectrumAnalyzer::Update(float* readData) {
     if (peak > 0.005f) {
         float desiredGain = peakTarget / peak;
         desiredGain = Mathematics::Constrain(desiredGain, 0.6f, 2.2f);
-        float response = desiredGain > autoGain ? 0.18f : 0.06f;
+        float response = desiredGain > autoGain ? 0.20f : 0.08f;
         autoGain += (desiredGain - autoGain) * response;
     } else {
-        autoGain += (1.0f - autoGain) * 0.04f;
+        autoGain += (1.0f - autoGain) * 0.06f;
     }
 
-    float suppression = floorClamp * 2.0f;
+    float suppression = floorClamp * 1.85f;
+    if (suppression < 0.010f) suppression = 0.010f;
+    if (suppression > 0.20f) suppression = 0.20f;
+    float baselineFloor = Mathematics::Constrain(floorClamp * 0.30f, 0.004f, 0.020f);
     for (uint8_t i = 0; i < bins; ++i) {
-        float value = processedData[i] - suppression;
-        value = value < 0.0f ? 0.0f : value;
+        float value = processedData[i];
+        if (value <= suppression) {
+            float quietRatio = suppression > 0.0f ? (value / suppression) : 0.0f;
+            processedData[i] = baselineFloor * (0.5f + quietRatio * 0.5f);
+            continue;
+        }
+
+        // Normalize after gating to preserve isolated spikes above the noise floor.
+        value = (value - suppression) / (1.0f - suppression);
         value = Mathematics::Constrain(value * autoGain, 0.0f, 1.1f);
-        processedData[i] = powf(value, 0.88f);
+        processedData[i] = powf(value, 0.90f);
+        if (processedData[i] < baselineFloor) processedData[i] = baselineFloor;
     }
 
     if (quiet && idleFrames > 18) {
-        float quietDecay = idleFrames > 45 ? 0.5f : 0.7f;
+        float quietDecay = idleFrames > 45 ? 0.75f : 0.85f;
         for (uint8_t i = 0; i < bins; ++i) {
             peakHoldTimer[i] = 0;
             peakHoldData[i] *= quietDecay;
@@ -181,6 +192,7 @@ void SpectrumAnalyzer::Update(float* readData) {
                                      ? smoothedData[i] * (1.0f - peakHoldBlend) + peakHoldData[i] * peakHoldBlend
                                      : smoothedData[i];
             processedData[i] = displayValue;
+            if (processedData[i] < baselineFloor) processedData[i] = baselineFloor;
         }
         visualReady = false;
     }
@@ -222,7 +234,7 @@ RGBColor SpectrumAnalyzer::GetRGB(const Vector3D& position, const Vector3D& norm
     if (mapped > maxIndex) mapped = maxIndex;
 
     float height = SampleFrequency(mapped);
-    height = Mathematics::Constrain(height * 2.6f, 0.0f, 1.0f);
+    height = Mathematics::Constrain(height * 2.8f, 0.0f, 1.0f);
     float yColor;
 
     if (mirrorY) {

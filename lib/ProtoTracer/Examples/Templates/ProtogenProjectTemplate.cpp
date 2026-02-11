@@ -696,7 +696,8 @@ void ProtogenProject::AddBackgroundMaterialFrame(Material& material, float opaci
 
 
 void ProtogenProject::SpectrumAnalyzerFace(){
-    sA.Update(MicrophoneFourier::GetWaveform());
+    // Spectrum analyzer expects FFT magnitudes; waveform input makes bars sluggish/incorrect.
+    sA.Update(MicrophoneFourier::GetFourierFiltered());
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
     eEA.AddParameterFrame(offsetFaceIndSA, 1.0f);
@@ -921,6 +922,11 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 
     sA.SetSize(analyzerSize);
     sA.SetPosition(analyzerPosition);
+    // Keep analyzer crisp so single-frequency peaks remain visible.
+    sA.SetSmoothingRadius(0);
+    sA.EnableColumnInterpolation(false);
+    sA.EnableFrequencyRemap(false);
+    sA.EnablePeakHoldBlend(true, 0.18f);
 
     oSC.SetSize(analyzerSize);
     oSC.SetPosition(analyzerPosition);
@@ -974,7 +980,7 @@ void ProtogenProject::Initialize() {
     faceColorStrip.Initialize();
 #endif
 
-    MicrophoneFourier::Initialize(microphonePin, 8000, 20.0f, 90.0f);//8KHz sample rate, 50dB min, 120dB max
+    MicrophoneFourier::Initialize(microphonePin, 12000, 50.0f, 120.0f);//12KHz sample rate (6KHz Nyquist), 50dB min, 120dB max
     
 #ifdef NEOTRELLISMENU
     Menu::Initialize(faceCount);//NeoTrellis

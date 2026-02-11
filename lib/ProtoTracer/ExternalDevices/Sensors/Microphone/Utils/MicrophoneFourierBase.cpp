@@ -117,11 +117,22 @@ void MicrophoneFourierBase::GenerateWaveform(uint16_t validSamples) {
 }
 
 float MicrophoneFourierBase::AverageMagnitude(uint16_t binL, uint16_t binH) {
-    float average = 0.0f;
+    uint16_t minBin = 1;
+    uint16_t maxBin = (FFTSize / 2) - 1;
 
-    for (uint16_t i = 1; i < FFTSize / 2; i++) {
-        if (i >= binL && i <= binH)
-            average += outputMagn[i];
+    if (binL < minBin) binL = minBin;
+    if (binL > maxBin) binL = maxBin;
+    if (binH < minBin) binH = minBin;
+    if (binH > maxBin) binH = maxBin;
+    if (binH < binL) {
+        uint16_t temp = binL;
+        binL = binH;
+        binH = temp;
+    }
+
+    float average = 0.0f;
+    for (uint16_t i = binL; i <= binH; ++i) {
+        average += outputMagn[i];
     }
 
     return average / float(binH - binL + 1);

@@ -13,9 +13,6 @@
 
 #include "../Material.h" // Base class for material types.
 #include "../Static/GradientMaterial.h" // Include for gradient materials.
-#include "../../../Physics/Utils/BouncePhysics.h" // Include for bounce physics utilities.
-#include "../../../Utils/Filter/MaxFilter.h" // Include for maximum value filtering.
-#include "../../../Utils/Filter/MinFilter.h" // Include for minimum value filtering.
 #include "../../../Utils/Math/Mathematics.h" // Include for mathematical utilities.
 
 /**
@@ -28,26 +25,22 @@
  */
 class Oscilloscope : public Material {
 private:
-    BouncePhysics* bPhy[128]; ///< Array of BouncePhysics instances for dynamic bouncing behavior.
+    static constexpr uint16_t kInputSamples = 512; ///< Amount of microphone history used per frame.
     Vector2D size; ///< The size of the oscilloscope visualization.
     Vector2D offset; ///< The position offset of the visualization.
     float angle = 0.0f; ///< Rotation angle of the visualization.
     float hueAngle = 0.0f; ///< Hue angle for color adjustments.
-    float radius = 40.0f; ///< Radius for circular visualization patterns.
-    uint8_t colors; ///< Number of colors in the gradient.
-    float* data; ///< Pointer to the audio sample data.
-    float midPoint = 0.0f; ///< Midpoint for audio data normalization.
+    float* data = nullptr; ///< Pointer to the display-ready waveform bins.
+    float scopedData[128] = {0.5f}; ///< Preprocessed and normalized oscilloscope bins (0..1).
+    float filteredWave[128] = {0.0f}; ///< Internal signed smoothing buffer (-1..1).
+    float displayAmplitude = 0.35f; ///< Smoothed auto-gain level for stable trace height.
+    bool hasData = false; ///< Indicates whether scopedData has valid values.
     uint8_t bins = 128; ///< Number of bins for audio data processing.
-
-    MaxFilter<40> maxF = MaxFilter<40>(); ///< Filter for tracking maximum values.
-    MinFilter<40> minF = MinFilter<40>(); ///< Filter for tracking minimum values.
 
     RGBColor rainbowSpectrum[6] = {RGBColor(255, 0, 0), RGBColor(255, 255, 0), RGBColor(0, 255, 0), RGBColor(0, 255, 255), RGBColor(0, 0, 255), RGBColor(255, 0, 255)}; ///< Predefined rainbow colors.
     GradientMaterial<6> gM = GradientMaterial<6>(rainbowSpectrum, 1.0f, false); ///< Gradient material for the rainbow spectrum.
 
     Material* material; ///< Pointer to an additional material for effects.
-
-    float minValue, maxValue; ///< Minimum and maximum values for data scaling.
 
 public:
     /**

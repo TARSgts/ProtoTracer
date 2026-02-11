@@ -183,9 +183,9 @@ void Menu::Initialize(uint8_t faceCount, uint8_t shortPressPin, uint8_t longPres
 
     SetSize(size);
 
-    textEngine.SetMaterial(&material);
     textEngine.SetPositionOffset(position);
     textEngine.SetBlinkTime(200);
+    textEngine.SetAntiAliasing(true);
 
 #ifndef NEOTRELLISMENU
     if (!MenuHandler<menuCount>::Initialize(shortPressPin, longPressPin, holdingTime)) {
@@ -220,9 +220,9 @@ void Menu::Initialize(uint8_t faceCount, Vector2D size) {
 
     SetSize(size);
 
-    textEngine.SetMaterial(&material);
     textEngine.SetPositionOffset(position);
     textEngine.SetBlinkTime(200);
+    textEngine.SetAntiAliasing(true);
 
 #ifdef NEOTRELLISMENU
     if (!MenuHandler<menuCount>::Initialize()) {

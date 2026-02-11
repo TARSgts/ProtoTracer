@@ -10,6 +10,11 @@ constexpr float kMaxDelta = 0.05f;
 constexpr float kMinMoveInterval = 0.12f;
 constexpr float kMaxMoveInterval = 0.24f;
 constexpr uint16_t kMaxFoodAttempts = 200;
+constexpr uint8_t kDisplayCols = 64;
+constexpr uint8_t kDisplayRows = 32;
+constexpr uint8_t kPixelsPerSnakeCell = 3;
+constexpr uint8_t kMinCols = 8;
+constexpr uint8_t kMinRows = 6;
 }
 
 SnakeMaterial::SnakeMaterial(Vector2D dimensions, Vector2D center)
@@ -33,21 +38,24 @@ void SnakeMaterial::RecalculateDimensions() {
     float width = size.X * 2.0f;
     float height = size.Y * 2.0f;
 
-    uint8_t targetCols = static_cast<uint8_t>(Mathematics::Max(12.0f, Mathematics::Min(28.0f, width / 8.0f)));
-    uint8_t targetRows = static_cast<uint8_t>(Mathematics::Max(8.0f, Mathematics::Min(20.0f, height / 8.0f)));
-    if (targetCols < 4) targetCols = 4;
-    if (targetRows < 4) targetRows = 4;
+    float pixelWidth = width / static_cast<float>(kDisplayCols);
+    float pixelHeight = height / static_cast<float>(kDisplayRows);
+    cellWidth = pixelWidth * static_cast<float>(kPixelsPerSnakeCell);
+    cellHeight = pixelHeight * static_cast<float>(kPixelsPerSnakeCell);
+    if (cellWidth <= 0.0f) {
+        cellWidth = 1.0f;
+    }
+    if (cellHeight <= 0.0f) {
+        cellHeight = 1.0f;
+    }
 
-    gridWidth = targetCols;
-    gridHeight = targetRows;
+    gridWidth = static_cast<uint8_t>(kDisplayCols / kPixelsPerSnakeCell);
+    gridHeight = static_cast<uint8_t>(kDisplayRows / kPixelsPerSnakeCell);
+    if (gridWidth < kMinCols) gridWidth = kMinCols;
+    if (gridHeight < kMinRows) gridHeight = kMinRows;
 
-    float cellX = width / static_cast<float>(gridWidth);
-    float cellY = height / static_cast<float>(gridHeight);
-    cellSize = Mathematics::Min(cellX, cellY);
-    if (cellSize < 4.0f) cellSize = 4.0f;
-
-    gridHalfWidth = cellSize * gridWidth * 0.5f;
-    gridHalfHeight = cellSize * gridHeight * 0.5f;
+    gridHalfWidth = cellWidth * static_cast<float>(gridWidth) * 0.5f;
+    gridHalfHeight = cellHeight * static_cast<float>(gridHeight) * 0.5f;
 
     float speedScale = Mathematics::Max(gridWidth, gridHeight) / 20.0f;
     moveInterval = Mathematics::Max(kMinMoveInterval, Mathematics::Min(kMaxMoveInterval, 0.2f / speedScale));
@@ -220,13 +228,13 @@ RGBColor SnakeMaterial::GetRGB(const Vector3D& position, const Vector3D& /*norma
     Vector2D relative(position.X, position.Y);
     relative = relative - offset;
 
-    if (relative.X < -gridHalfWidth || relative.X > gridHalfWidth) return RGBColor();
-    if (relative.Y < -gridHalfHeight || relative.Y > gridHalfHeight) return RGBColor();
+    if (relative.X < -gridHalfWidth || relative.X > gridHalfWidth) return backgroundColor;
+    if (relative.Y < -gridHalfHeight || relative.Y > gridHalfHeight) return backgroundColor;
 
     float originX = -gridHalfWidth;
     float originY = -gridHalfHeight;
-    int16_t col = static_cast<int16_t>(floorf((relative.X - originX) / cellSize));
-    int16_t row = static_cast<int16_t>(floorf((relative.Y - originY) / cellSize));
+    int16_t col = static_cast<int16_t>(floorf((relative.X - originX) / cellWidth));
+    int16_t row = static_cast<int16_t>(floorf((relative.Y - originY) / cellHeight));
     if (col < 0 || row < 0 || col >= gridWidth || row >= gridHeight) {
         return backgroundColor;
     }

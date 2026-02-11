@@ -11,7 +11,8 @@ private:
     Vector2D offset;
     uint8_t gridWidth = 0;
     uint8_t gridHeight = 0;
-    float cellSize = 6.0f;
+    float cellWidth = 9.0f;
+    float cellHeight = 9.0f;
     float gridHalfWidth = 0.0f;
     float gridHalfHeight = 0.0f;
 

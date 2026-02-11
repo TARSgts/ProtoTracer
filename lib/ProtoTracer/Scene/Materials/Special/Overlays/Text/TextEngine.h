@@ -23,6 +23,7 @@ private:
     char lines[lineCount][characterWidth];
     uint16_t blinkTime;
     bool isEfficient = false;
+    bool useAntiAliasing = false;
 
 public:
     TextEngine(bool isEfficient = false);
@@ -40,6 +41,8 @@ public:
     void SetRotationAngle(float rotationAngle);
 
     void SetBlinkTime(uint16_t blinkTime);
+
+    void SetAntiAliasing(bool enabled);
 
     void SetText(uint8_t line, String value, bool centerText = false);
 

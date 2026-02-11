@@ -48,6 +48,11 @@ void TextEngine<lineCount, characterWidth>::SetBlinkTime(uint16_t blinkTime) {
 }
 
 template<uint8_t lineCount, uint8_t characterWidth>
+void TextEngine<lineCount, characterWidth>::SetAntiAliasing(bool enabled) {
+    useAntiAliasing = enabled;
+}
+
+template<uint8_t lineCount, uint8_t characterWidth>
 void TextEngine<lineCount, characterWidth>::SetText(uint8_t line, String value, bool centerText) {
     uint8_t length = value.length();
     int spacing = centerText ? (length - characterWidth) / 2 : 0;
@@ -100,37 +105,76 @@ RGBColor TextEngine<lineCount, characterWidth>::GetRGB(const Vector3D& position,
 
     positionL = positionL - Vector3D(positionOffset.X, positionOffset.Y, 0);//offset position
     
-    int x = floorf(Mathematics::Map(positionL.X, 0.0f, size.X, characterWidth * 10.0f, 0.0f));
-    int y = floorf(Mathematics::Map(positionL.Y, 0.0f, size.Y, lineCount * 10.0f, 0.0f));
+    float xF = Mathematics::Map(positionL.X, 0.0f, size.X, characterWidth * 10.0f, 0.0f);
+    float yF = Mathematics::Map(positionL.Y, 0.0f, size.Y, lineCount * 10.0f, 0.0f);
+
+    int x = floorf(xF);
+    int y = floorf(yF);
 
     if(x < 0 || x >= characterWidth * 10 || y < 0 || y >= lineCount * 10) return black;
 
-    //bit 
-    uint8_t charXBit = 9 - (x % 10);
-    uint8_t charYBit = y % 10;
-
-    char searchChar = lines[y / 10][x / 10];
+    const int charColumn = x / 10;
+    const int charRow = y / 10;
+    char searchChar = lines[charRow][charColumn];
     bool blink = millis() % (blinkTime * 2) > blinkTime;
+    bool selected = searchChar > 90;
 
-    if(charYBit == 0 || charYBit == 9 || charXBit == 0 || charXBit == 9){//margin
-        if (searchChar > 90 && blink) {
-            return material->GetRGB(positionL, normal, uvw).HueShift(180);
-        }
-        else return black;
-    }
-    else{
-        uint8_t yCharacter = Characters::GetCharacter(searchChar)[charYBit - 1];//get character
+    RGBColor baseColor = material->GetRGB(positionL, normal, uvw);
+    RGBColor selectedColor = baseColor.HueShift(180);
+    RGBColor foregroundColor = selected ? selectedColor : baseColor;
+    RGBColor backgroundColor = black;
 
-        bool xBit = 1 & (yCharacter >> (charXBit - 1));
-        
-        if (searchChar > 90 && blink){
-            return xBit ? black : material->GetRGB(positionL, normal, uvw).HueShift(180);
+    if (selected && blink) {
+        foregroundColor = black;
+        backgroundColor = selectedColor;
+    }
+
+    float coverage = 0.0f;
+
+    if (useAntiAliasing) {
+        const uint8_t* glyph = Characters::GetCharacter(searchChar);
+        const float sampleOffsets[4][2] = {
+            {-0.25f, -0.25f},
+            { 0.25f, -0.25f},
+            {-0.25f,  0.25f},
+            { 0.25f,  0.25f}
+        };
+
+        float localXCenter = xF - (charColumn * 10.0f);
+        float localYCenter = yF - (charRow * 10.0f);
+        float coverageAccum = 0.0f;
+
+        for (uint8_t i = 0; i < 4; i++) {
+            float sampleX = localXCenter + sampleOffsets[i][0];
+            float sampleY = localYCenter + sampleOffsets[i][1];
+
+            if (sampleX < 1.0f || sampleX >= 9.0f || sampleY < 1.0f || sampleY >= 9.0f) {
+                continue;
+            }
+
+            uint8_t glyphX = (uint8_t)floorf(sampleX) - 1;
+            uint8_t glyphY = (uint8_t)floorf(sampleY) - 1;
+            uint8_t rowBits = glyph[glyphY];
+            bool bitOn = (rowBits >> (7 - glyphX)) & 0x01;
+
+            coverageAccum += bitOn ? 1.0f : 0.0f;
         }
-        else if (searchChar > 90){
-            return xBit ? material->GetRGB(positionL, normal, uvw).HueShift(180) : black;
+
+        coverage = coverageAccum * 0.25f;
+    } else {
+        //bit
+        uint8_t charXBit = 9 - (x % 10);
+        uint8_t charYBit = y % 10;
+
+        if(charYBit == 0 || charYBit == 9 || charXBit == 0 || charXBit == 9){//margin
+            coverage = 0.0f;
         }
-        else {
-            return xBit ? material->GetRGB(positionL, normal, uvw) : black;
+        else{
+            uint8_t yCharacter = Characters::GetCharacter(searchChar)[charYBit - 1];//get character
+            bool xBit = 1 & (yCharacter >> (charXBit - 1));
+            coverage = xBit ? 1.0f : 0.0f;
         }
     }
+
+    return RGBColor::InterpolateColors(backgroundColor, foregroundColor, coverage);
 }
