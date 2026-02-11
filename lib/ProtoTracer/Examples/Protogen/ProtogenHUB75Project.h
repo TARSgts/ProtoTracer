@@ -17,6 +17,9 @@
 #ifdef ENABLE_GIF_FACE
 #include "../../ExternalDevices/Displays/SmartMatrixGifPlayer.h"
 #endif
+#ifdef ENABLE_USB_VIDEO_FACE
+#include "../../ExternalDevices/Displays/USBVideoStreamPlayer.h"
+#endif
 
 // E 001 TARS: Add in a plane to the corner of the display to illuminate side panel ---
 // ASTRALTODO: Update and use a flat circle for this!
@@ -73,10 +76,11 @@ private:
 #endif
 #ifdef ENABLE_GIF_FACE
     static constexpr uint8_t kGifFaceIndex = kAfterSlotFaceIndex;
-    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex + 1;
+    static constexpr uint8_t kAfterGifFaceIndex = kAfterSlotFaceIndex + 1;
 #else
-    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex;
+    static constexpr uint8_t kAfterGifFaceIndex = kAfterSlotFaceIndex;
 #endif
+    static constexpr uint8_t kFaceCount = kAfterGifFaceIndex;
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
@@ -119,6 +123,9 @@ private:
 #ifdef ENABLE_GIF_FACE
     SmartMatrixGifPlayer gifPlayer;
     bool gifFaceActive = false;
+#endif
+#ifdef ENABLE_USB_VIDEO_FACE
+    USBVideoStreamPlayer usbVideoPlayer;
 #endif
 
     // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
@@ -529,6 +536,9 @@ public:
 #ifdef ENABLE_GIF_FACE
         gifPlayer.Initialize();
 #endif
+#ifdef ENABLE_USB_VIDEO_FACE
+        usbVideoPlayer.Initialize();
+#endif
     }
 
     void Update(float ratio) override {
@@ -537,6 +547,7 @@ public:
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
         bool gifDecoding = false;
+        bool externalFrameProvider = false;
 #ifdef ENABLE_GIF_FACE
         gifFaceActive = false;
 #endif
@@ -569,10 +580,21 @@ public:
         if (gifDecoding) {
             pM.GetObject()->Disable();
         }
-        controller.SetExternalFrameProvider(gifDecoding);
+        externalFrameProvider = externalFrameProvider || gifDecoding;
 #endif
 
-        if (!gifDecoding) {
+#ifdef ENABLE_USB_VIDEO_FACE
+        usbVideoPlayer.Update();
+        bool usbVideoStreaming = usbVideoPlayer.IsStreamingModeActive();
+        if (usbVideoStreaming) {
+            pM.GetObject()->Disable();
+        }
+        externalFrameProvider = externalFrameProvider || usbVideoStreaming;
+#endif
+
+        controller.SetExternalFrameProvider(externalFrameProvider);
+
+        if (!externalFrameProvider) {
             UpdateFace(ratio);
 
             pM.Update();

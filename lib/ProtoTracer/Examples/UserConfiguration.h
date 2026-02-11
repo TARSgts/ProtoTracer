@@ -173,6 +173,15 @@
 #endif
 
 /**
+ * @def ENABLE_USB_VIDEO_FACE
+ * @brief Enables the USB video streaming face (frames pushed from a PC app over USB serial).
+ */
+#define ENABLE_USB_VIDEO_FACE
+#if DOXYGEN
+#define ENABLE_USB_VIDEO_FACE
+#endif
+
+/**
  * @def ENABLE_SORTING_FACE
  * @brief Enables the sorting algorithm (merge sort) face.
  */

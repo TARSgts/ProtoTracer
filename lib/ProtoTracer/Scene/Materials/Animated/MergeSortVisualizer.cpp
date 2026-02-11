@@ -659,26 +659,46 @@ void MergeSortVisualizer::Update() {
 }
 
 RGBColor MergeSortVisualizer::GetRGB(const Vector3D& position, const Vector3D& /*normal*/, const Vector3D& /*uvw*/) {
+    static const RGBColor kBackgroundColor(3, 3, 6);
+
     Vector2D relative(position.X, position.Y);
     relative = relative - offset;
 
     if (relative.X < -size.X || relative.X > size.X) return RGBColor();
     if (relative.Y < -size.Y || relative.Y > size.Y) return RGBColor();
 
-    float normalizedColumn = Mathematics::Map(relative.X, -size.X, size.X, 0.0f, static_cast<float>(columns));
-    if (normalizedColumn < 0.0f) normalizedColumn = 0.0f;
-    float maxColumn = static_cast<float>(columns) - 0.0001f;
-    if (normalizedColumn > maxColumn) normalizedColumn = maxColumn;
+    float widthF = size.X * 2.0f;
+    float heightF = size.Y * 2.0f;
+    if (widthF <= 0.0f || heightF <= 0.0f || columns == 0) return RGBColor();
 
-    uint8_t column = static_cast<uint8_t>(normalizedColumn);
+    int16_t widthPx = static_cast<int16_t>(floorf(widthF + 0.5f));
+    int16_t heightPx = static_cast<int16_t>(floorf(heightF + 0.5f));
+    if (widthPx <= 0 || heightPx <= 0) return RGBColor();
+
+    int16_t pixelX = static_cast<int16_t>(floorf(relative.X + size.X));
+    int16_t pixelY = static_cast<int16_t>(floorf(relative.Y + size.Y));
+    if (pixelX < 0 || pixelX >= widthPx) return RGBColor();
+    if (pixelY < 0 || pixelY >= heightPx) return RGBColor();
+
+    uint8_t column = static_cast<uint8_t>((static_cast<uint32_t>(pixelX) * columns) / static_cast<uint32_t>(widthPx));
+    if (column >= columns) column = columns - 1;
     float columnRatio = columns > 1 ? (float)column / float(columns - 1) : 0.0f;
-    float columnFraction = normalizedColumn - float(column);
+
+    uint16_t columnStartPx = static_cast<uint16_t>((static_cast<uint32_t>(column) * widthPx) / columns);
+    uint16_t columnEndPx = static_cast<uint16_t>((static_cast<uint32_t>(column + 1) * widthPx) / columns);
+    if (columnEndPx <= columnStartPx) {
+        columnEndPx = columnStartPx + 1;
+    }
+    uint16_t columnWidthPx = columnEndPx - columnStartPx;
+    uint16_t columnLocalPx = static_cast<uint16_t>(pixelX) - columnStartPx;
 
     if (columnGapRatio > 0.0f) {
-        float gapHalf = columnGapRatio * 0.5f;
-        if (gapHalf > 0.49f) gapHalf = 0.49f;
-        if (columnFraction < gapHalf || columnFraction > (1.0f - gapHalf)) {
-            return RGBColor(3, 3, 6);
+        uint16_t gapPixels = static_cast<uint16_t>(floorf(float(columnWidthPx) * columnGapRatio * 0.5f));
+        if (gapPixels * 2 >= columnWidthPx) {
+            gapPixels = (columnWidthPx > 1) ? (columnWidthPx - 1) / 2 : 0;
+        }
+        if (columnLocalPx < gapPixels || columnLocalPx >= (columnWidthPx - gapPixels)) {
+            return kBackgroundColor;
         }
     }
 
@@ -686,7 +706,7 @@ RGBColor MergeSortVisualizer::GetRGB(const Vector3D& position, const Vector3D& /
     if (barHeight < 0.02f) barHeight = 0.02f;
     if (barHeight > 1.0f) barHeight = 1.0f;
 
-    float yRatio = Mathematics::Map(relative.Y, -size.Y, size.Y, 0.0f, 1.0f);
+    float yRatio = (static_cast<float>(pixelY) + 0.5f) / static_cast<float>(heightPx);
 
     static const RGBColor coolColor(48, 120, 255);
     static const RGBColor warmColor(255, 80, 120);
@@ -699,10 +719,10 @@ RGBColor MergeSortVisualizer::GetRGB(const Vector3D& position, const Vector3D& /
     }
 
     if (yRatio > barHeight) {
-        return RGBColor(3, 3, 6);
+        return kBackgroundColor;
     }
 
-    float depth = (barHeight - yRatio);
+    float depth = barHeight - yRatio;
     float brightness = 0.4f + depth * 0.6f;
     uint8_t r = static_cast<uint8_t>(float(color.R) * brightness);
     uint8_t g = static_cast<uint8_t>(float(color.G) * brightness);

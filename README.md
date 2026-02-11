@@ -65,6 +65,9 @@ To get started with ProtoTracer, refer to the [ProtoTracer Documentation](https:
 - Manipulating objects
 - Rendering to displays
 
+USB serial streaming to HUB75 (auto-switch when the PC app starts) is documented in:
+- [`tutorial/USBVideoStreaming.md`](tutorial/USBVideoStreaming.md)
+
 
 # Customization
 
