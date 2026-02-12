@@ -6,6 +6,13 @@ ProtoTracer is a real-time 3D rendering and animation engine designed for microc
 [![Generate Documentation](https://github.com/coelacant1/ProtoTracer/actions/workflows/documentation.yml/badge.svg)](https://github.com/coelacant1/ProtoTracer/actions/workflows/documentation.yml)
 [![pages-build-deployment](https://github.com/coelacant1/ProtoTracer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/coelacant1/ProtoTracer/actions/workflows/pages/pages-build-deployment)
 
+## Quick Links
+
+- [Usage](#usage)
+- [USB Streaming Updates (Windows)](#usb-streaming-updates-windows)
+- [Current change summary (from git working tree)](#current-change-summary-from-git-working-tree)
+- [Questions and Support](#questions-and-support)
+
 ProtoTracer supports:
 - **64x32 HUB75 panels**
 - **Custom panel designs based on WS2812B LEDs - WS35 Boards**
@@ -67,6 +74,102 @@ To get started with ProtoTracer, refer to the [ProtoTracer Documentation](https:
 
 USB serial streaming to HUB75 (auto-switch when the PC app starts) is documented in:
 - [`tutorial/USBVideoStreaming.md`](tutorial/USBVideoStreaming.md)
+
+## USB Streaming Updates (Windows)
+
+Recent USB streaming changes are now built into the repo and can be run directly from `tools/`.
+
+### Firmware requirement
+
+Enable USB video streaming in:
+
+- `lib/ProtoTracer/Examples/UserConfiguration.h`
+
+```cpp
+#define ENABLE_USB_VIDEO_FACE
+```
+
+### Core streamer
+
+- `tools/usb_video_streamer.py`
+
+Features:
+- Streams `screen`, `camera`, or `video` sources over USB serial.
+- Sends start/stop control packets so the Teensy enters/leaves stream mode automatically.
+- Supports monitor selector values for `--monitor`:
+  - `primary`
+  - `auto` (uses the newest/last monitor)
+  - explicit monitor index (`1`, `2`, etc)
+
+### Windows launcher modes
+
+- `tools/run_usb_stream.bat`
+
+Supported launch modes:
+- `mirror`/`clone`: sets Windows clone mode and captures monitor `1` by default.
+- `extend`: ensures the virtual display driver is ready, switches to extend mode, captures monitor `2`.
+- `second`/`external`: ensures virtual display driver is ready, switches to second-screen-only, captures monitor `2`.
+- `primary`: returns Windows to primary-only mode.
+
+Behavior:
+- Validates monitor availability for `extend` and `second`.
+- Restores primary-only mode after `extend` or `second` stream sessions end.
+
+### Virtual display helper
+
+- `tools/ensure_virtual_display.ps1`
+
+What it does:
+- Installs/enables Virtual Display Driver (VDD) if needed.
+- Detects `Root\\MttVDD` display devices.
+- Removes duplicate VDD instances so repeated runs do not create many virtual monitors.
+
+### Mirror-only executable flow
+
+- `tools/usb_mirror_app.py`: mirror-focused entrypoint.
+- `tools/build_usb_mirror_exe.bat`: builds a standalone EXE with PyInstaller.
+
+Build:
+
+```bat
+tools\build_usb_mirror_exe.bat
+```
+
+Output:
+
+```text
+tools\dist\ProtoTracerUSBMirror.exe
+```
+
+Run (default mirror behavior):
+
+```bat
+tools\dist\ProtoTracerUSBMirror.exe
+```
+
+Optional:
+
+```bat
+tools\dist\ProtoTracerUSBMirror.exe --preview
+tools\dist\ProtoTracerUSBMirror.exe --list-monitors
+```
+
+### Current change summary (from git working tree)
+
+Modified files:
+- `README.md`: added USB streaming update documentation and usage.
+- `tools/run_usb_stream.bat`: added display mode handling (`mirror`, `extend`, `second`, `primary`), virtual-display readiness checks, monitor-count validation, and primary-display restore after streaming.
+- `tools/usb_video_streamer.py`: added flexible monitor selector parsing (`auto`, `primary`, index) through `resolve_monitor_index`.
+- `tutorial/USBVideoStreaming.md`: expanded setup/usage docs for launcher modes and mirror-only EXE workflow.
+
+New files:
+- `tools/ensure_virtual_display.ps1`: installs/enables VDD and removes duplicate `Root\\MttVDD` instances to avoid multiple phantom monitors.
+- `tools/usb_mirror_app.py`: mirror-first entrypoint (defaults to primary monitor, 30 FPS).
+- `tools/build_usb_mirror_exe.bat`: builds `ProtoTracerUSBMirror.exe` with PyInstaller.
+- `tools/dist/ProtoTracerUSBMirror.exe`: built mirror app binary output.
+
+Local untracked content not required for USB streaming:
+- `tools/MCUME/` (separate local content).
 
 
 # Customization

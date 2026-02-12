@@ -28,6 +28,12 @@ From the repository root:
 python -m pip install -r tools/usb_video_streamer_requirements.txt
 ```
 
+Install the virtual monitor driver (Windows, one time):
+
+```powershell
+winget install --id VirtualDrivers.Virtual-Display-Driver --accept-source-agreements --accept-package-agreements
+```
+
 ## Basic usage
 
 List monitors:
@@ -40,6 +46,12 @@ Stream monitor 2 at 30 FPS:
 
 ```bash
 python tools/usb_video_streamer.py --port COM7 --source screen --monitor 2 --fps 30 --preview
+```
+
+Auto-pick the newest/last monitor (useful for virtual displays):
+
+```bash
+python tools/usb_video_streamer.py --source screen --monitor auto --fps 30 --preview
 ```
 
 Stream a camera:
@@ -68,3 +80,48 @@ python tools/usb_video_streamer.py --port COM7 --source video --video-path demo.
 - Start with `--fps 30`.
 - If frames tear or lag, reduce FPS (`--fps 20`).
 - If the image looks stretched, switch between `--scale-mode fill` and `--scale-mode fit`.
+
+## Quick launcher modes (Windows)
+
+The batch launcher supports display mode switching before streaming:
+
+```bat
+tools\run_usb_stream.bat extend
+tools\run_usb_stream.bat mirror
+tools\run_usb_stream.bat second
+```
+
+- `extend` = extended desktop.
+- `mirror` = cloned desktop.
+- `second` = second-screen-only.
+- If no mode is provided, it keeps your current Windows display mode.
+- `extend` and `second` will prompt for Administrator access to ensure the virtual display driver is installed/enabled.
+- Mode defaults: `mirror` captures monitor `1`; `extend`/`second` capture monitor `2` (override by passing your own args).
+
+## Mirror-only executable (Windows)
+
+If you only want desktop mirroring, build the dedicated mirror EXE:
+
+```bat
+tools\build_usb_mirror_exe.bat
+```
+
+Output:
+
+```text
+tools\dist\ProtoTracerUSBMirror.exe
+```
+
+Run it with no arguments for primary-monitor mirroring at 30 FPS:
+
+```bat
+tools\dist\ProtoTracerUSBMirror.exe
+```
+
+Optional examples:
+
+```bat
+tools\dist\ProtoTracerUSBMirror.exe --preview
+tools\dist\ProtoTracerUSBMirror.exe --monitor 1 --fps 24
+tools\dist\ProtoTracerUSBMirror.exe --list-monitors
+```

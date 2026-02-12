@@ -115,6 +115,37 @@ class VideoCaptureSource(FrameSource):
         self._capture.release()
 
 
+def resolve_monitor_index(selector: str) -> int:
+    with mss.mss() as capture:
+        monitors = capture.monitors
+
+    monitor_count = len(monitors) - 1
+    if monitor_count <= 0:
+        raise RuntimeError("No monitors found by mss.")
+
+    normalized = (selector or "").strip().lower()
+    if normalized in ("", "auto", "last", "virtual"):
+        if monitor_count == 1:
+            return 1
+        return monitor_count
+
+    if normalized in ("primary", "main"):
+        return 1
+
+    try:
+        index = int(normalized)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Invalid --monitor value '{selector}'. Use an index, 'auto', or 'primary'."
+        ) from exc
+
+    if index < 1 or index > monitor_count:
+        raise RuntimeError(
+            f"Monitor index {index} is out of range (valid: 1..{monitor_count})."
+        )
+    return index
+
+
 def list_monitors() -> None:
     with mss.mss() as capture:
         monitors = capture.monitors
@@ -277,9 +308,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--monitor",
-        type=int,
-        default=1,
-        help="Monitor index for screen source (use --list-monitors).",
+        default="auto",
+        help="Monitor index or selector for screen source: index, 'auto', or 'primary'.",
     )
     parser.add_argument(
         "--region",
@@ -323,7 +353,8 @@ def create_source(args: argparse.Namespace) -> FrameSource:
             if width <= 0 or height <= 0:
                 raise RuntimeError("Region width and height must be greater than zero.")
             region_tuple = (left, top, width, height)
-        return ScreenSource(args.monitor, region_tuple)
+        monitor_index = resolve_monitor_index(args.monitor)
+        return ScreenSource(monitor_index, region_tuple)
 
     if args.source == "camera":
         return VideoCaptureSource(args.camera_index, loop=False)
