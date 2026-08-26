@@ -7,8 +7,8 @@
 
 namespace {
 constexpr float kMaxDelta = 0.05f;
-constexpr float kSnapThreshold = 0.1f;
-constexpr float kConfettiInterval = 0.02f;
+constexpr float kSettleSeconds = 0.2f;   ///< ease duration for a natural (already-close) stop
+constexpr float kForcedRollSpeed = 4.0f; ///< symbols/sec for the extra forced-win roll distance
 
 inline float Clamp01(float v) {
     if (v < 0.0f) return 0.0f;
@@ -16,12 +16,14 @@ inline float Clamp01(float v) {
     return v;
 }
 
-inline bool InCircle(float x, float y, float r) {
-    return (x * x + y * y) <= (r * r);
-}
-
-inline bool InRect(float x, float y, float hw, float hh) {
-    return fabsf(x) <= hw && fabsf(y) <= hh;
+// Nearest position at or after `naturalPosition` that lands on `targetSymbol`, wrapping
+// forward through at most one extra revolution -- reels only ever move in the positive
+// direction, so a lerp target must be re-expressed this way (never as an arbitrary
+// absolute symbol index) or the interpolation implies an impossible backward/instant jump.
+inline float NextForwardOccurrence(float naturalPosition, uint8_t targetSymbol, uint8_t symbolCount) {
+    float wrapDiff = fmodf(static_cast<float>(targetSymbol) - naturalPosition, static_cast<float>(symbolCount));
+    if (wrapDiff < 0.0f) wrapDiff += static_cast<float>(symbolCount);
+    return naturalPosition + wrapDiff;
 }
 
 // Sprite data (12x12 indexed) for slot symbols
@@ -137,7 +139,6 @@ void SlotMachineMaterial::RecalculateDimensions() {
     float scale = Mathematics::Max(0.7f, Mathematics::Min(1.3f, innerH / 60.0f));
     spinSpeed = 9.5f * scale;
     baseSpeed = 2.5f * scale;
-    idlePause = 5.0f;
 }
 
 void SlotMachineMaterial::ResetSpin() {
@@ -248,12 +249,20 @@ void SlotMachineMaterial::Update() {
             snapStart[i] = reelOffset[i];
             float naturalSnap = roundf(reelOffset[i]);
             float target = naturalSnap;
-            if (forceWinPlanned) target = static_cast<float>(forceWinSymbol);
+            float settleSeconds = kSettleSeconds;
+            if (forceWinPlanned) {
+                // Stretch the ease duration so the extra forced-win distance is covered at a
+                // steady, visible roll speed rather than crammed into the same short settle
+                // window used for a near-zero-distance natural stop.
+                target = NextForwardOccurrence(naturalSnap, forceWinSymbol, kSymbols);
+                settleSeconds = Mathematics::Max(kSettleSeconds, (target - naturalSnap) / kForcedRollSpeed);
+            }
             snapTarget[i] = target;
+            snapDuration[i] = settleSeconds;
         }
 
         if (snapLerping[i]) {
-            snapProgress[i] += delta * 5.0f; // ~0.2s ease
+            snapProgress[i] += delta / snapDuration[i];
             float t = Clamp01(snapProgress[i]);
             float ease = t * t * (3.0f - 2.0f * t); // smoothstep
             reelOffset[i] = snapStart[i] + (snapTarget[i] - snapStart[i]) * ease;
@@ -276,7 +285,13 @@ void SlotMachineMaterial::Update() {
         bool matched = (mid0 == mid1 && mid1 == mid2);
         bool forcedWin = false;
         if (!matched && forceWinPlanned) {
-            mid0 = mid1 = mid2 = forceWinSymbol;
+            // Should be unreachable -- forced-win reels are eased to land exactly on
+            // forceWinSymbol via NextForwardOccurrence() above -- but if it ever happens,
+            // correct the actual reel offsets rather than just declaring a win: otherwise
+            // confetti would fall while the reels visibly show mismatched symbols.
+            for (uint8_t i = 0; i < kReels; ++i) {
+                reelOffset[i] = NextForwardOccurrence(roundf(reelOffset[i]), forceWinSymbol, kSymbols);
+            }
             forcedWin = true;
         }
         confettiActive = matched || forcedWin;
@@ -304,8 +319,6 @@ RGBColor SlotMachineMaterial::GetRGB(const Vector3D& position, const Vector3D& /
         return frameColor;
     }
 
-    // reel background gradient
-    float reelV = (relative.Y + gridHalfH) / (gridHalfH * 2.0f); // 0..1
     // background around symbols is black per request
     RGBColor reelColor = backgroundColor;
 
@@ -361,8 +374,11 @@ RGBColor SlotMachineMaterial::GetRGB(const Vector3D& position, const Vector3D& /
             uint8_t idx = seed % 6u;
             RGBColor c = symbolColors[idx];
             float alpha = Clamp01(confettiTimer / confettiDuration);
-            alpha = 0.6f + alpha * 0.8f; // boost brightness
-            return RGBColor(uint8_t(c.R * alpha), uint8_t(c.G * alpha), uint8_t(c.B * alpha));
+            alpha = 0.6f + alpha * 0.8f; // boost brightness -- can exceed 1.0, so clamp below
+            uint8_t r = static_cast<uint8_t>(Mathematics::Min(255.0f, c.R * alpha));
+            uint8_t g = static_cast<uint8_t>(Mathematics::Min(255.0f, c.G * alpha));
+            uint8_t b = static_cast<uint8_t>(Mathematics::Min(255.0f, c.B * alpha));
+            return RGBColor(r, g, b);
         }
     }
 

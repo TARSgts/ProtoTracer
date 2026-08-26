@@ -20,12 +20,12 @@ private:
     float snapStart[kReels] = {0.0f, 0.0f, 0.0f};
     float snapTarget[kReels] = {0.0f, 0.0f, 0.0f};
     float snapProgress[kReels] = {0.0f, 0.0f, 0.0f};
+    float snapDuration[kReels] = {0.2f, 0.2f, 0.2f};
 
     float baseSpeed = 2.5f;
     float spinSpeed = 9.5f;
     float spinTimer = 0.0f;
     float spinDuration = 2.0f;
-    float idlePause = 5.0f;
     bool spinning = true;
     bool stopping = false;
     bool leverLatched = false;
