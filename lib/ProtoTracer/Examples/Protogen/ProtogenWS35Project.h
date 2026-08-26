@@ -21,10 +21,22 @@ private:
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kBaseFaceCount = 10;
 #ifdef ENABLE_PONG_FACE
-    static constexpr uint8_t kPongFaceIndex = kBaseFaceCount;
-    static constexpr uint8_t kAfterPongFaceIndex = kBaseFaceCount + 1;
+    #ifdef ENABLE_FRACTAL_FACE
+    static constexpr uint8_t kFractalFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterFractalFaceIndex = kBaseFaceCount + 1;
+    #else
+    static constexpr uint8_t kAfterFractalFaceIndex = kBaseFaceCount;
+    #endif
+    static constexpr uint8_t kPongFaceIndex = kAfterFractalFaceIndex;
+    static constexpr uint8_t kAfterPongFaceIndex = kAfterFractalFaceIndex + 1;
 #else
-    static constexpr uint8_t kAfterPongFaceIndex = kBaseFaceCount;
+    #ifdef ENABLE_FRACTAL_FACE
+    static constexpr uint8_t kFractalFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterFractalFaceIndex = kBaseFaceCount + 1;
+    #else
+    static constexpr uint8_t kAfterFractalFaceIndex = kBaseFaceCount;
+    #endif
+    static constexpr uint8_t kAfterPongFaceIndex = kAfterFractalFaceIndex;
 #endif
 #ifdef ENABLE_SPACE_INVADERS_FACE
     static constexpr uint8_t kInvaderFaceIndex = kAfterPongFaceIndex;
@@ -52,9 +64,15 @@ private:
 #endif
 #ifdef ENABLE_SLOT_MACHINE_FACE
     static constexpr uint8_t kSlotFaceIndex = kAfterLifeFaceIndex;
-    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex + 1;
+    static constexpr uint8_t kAfterSlotFaceIndex = kAfterLifeFaceIndex + 1;
 #else
-    static constexpr uint8_t kFaceCount = kAfterLifeFaceIndex;
+    static constexpr uint8_t kAfterSlotFaceIndex = kAfterLifeFaceIndex;
+#endif
+#ifdef ENABLE_DINO_FACE
+    static constexpr uint8_t kDinoFaceIndex = kAfterSlotFaceIndex;
+    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex + 1;
+#else
+    static constexpr uint8_t kFaceCount = kAfterSlotFaceIndex;
 #endif
     WS35SplitCameraManager cameras;
     WS35Controller controller = WS35Controller(&cameras, 50);
@@ -95,6 +113,9 @@ private:
     uint8_t dvdBouncePaletteIndex = 0;
     
 	const __FlashStringHelper* faceArray[kFaceCount] = {F("DEFAULT"), F("ANGRY"), F("DOUBT"), F("FROWN"), F("LOOKUP"), F("SAD"), F("AUDIO1"), F("AUDIO2"), F("AUDIO3"), F("DVDLOGO"),
+        #ifdef ENABLE_FRACTAL_FACE
+        F("FRACTAL"),
+        #endif
         #ifdef ENABLE_PONG_FACE
         F("PONG"),
         #endif
@@ -112,6 +133,9 @@ private:
         #endif
         #ifdef ENABLE_SLOT_MACHINE_FACE
         F("SLOT"),
+        #endif
+        #ifdef ENABLE_DINO_FACE
+        F("DINO"),
         #endif
     };
 
@@ -480,6 +504,9 @@ public:
 #ifdef ENABLE_SLOT_MACHINE_FACE
             && mode != kSlotFaceIndex
 #endif
+#ifdef ENABLE_DINO_FACE
+            && mode != kDinoFaceIndex
+#endif
         ){
             Surprised();
         }
@@ -505,6 +532,11 @@ public:
                 else if (mode == 9) {
                     DVDLogoFace(ratio);
                 }
+                #ifdef ENABLE_FRACTAL_FACE
+                else if (mode == kFractalFaceIndex) {
+                    FractalFace();
+                }
+                #endif
                 #ifdef ENABLE_PONG_FACE
                 else if (mode == kPongFaceIndex) {
                     PongAutoFace();
@@ -533,6 +565,11 @@ public:
                 #ifdef ENABLE_SLOT_MACHINE_FACE
                 else if (mode == kSlotFaceIndex) {
                     SlotMachineAutoFace();
+                }
+                #endif
+                #ifdef ENABLE_DINO_FACE
+                else if (mode == kDinoFaceIndex) {
+                    DinoAutoFace();
                 }
                 #endif
             }

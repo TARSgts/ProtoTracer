@@ -16,10 +16,40 @@ Flags:
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import struct
+import subprocess
 import sys
 import time
 from typing import Optional, Tuple, Union
+
+
+def _maybe_reexec_into_local_venv() -> None:
+    """Prefer a sibling .venv interpreter when launched from a system Python."""
+    if os.environ.get("PROTO_USB_STREAMER_NO_REEXEC") == "1":
+        return
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = []
+    if os.name == "nt":
+        candidates.append(os.path.join(script_dir, ".venv", "Scripts", "python.exe"))
+    else:
+        candidates.append(os.path.join(script_dir, ".venv", "bin", "python3"))
+        candidates.append(os.path.join(script_dir, ".venv", "bin", "python"))
+
+    current_python = os.path.abspath(sys.executable)
+    for candidate in candidates:
+        if not os.path.isfile(candidate):
+            continue
+        if os.path.abspath(candidate) == current_python:
+            return
+        os.environ["PROTO_USB_STREAMER_NO_REEXEC"] = "1"
+        os.execv(candidate, [candidate, __file__, *sys.argv[1:]])
+        return
+
+
+_maybe_reexec_into_local_venv()
 
 try:
     import cv2
@@ -68,8 +98,22 @@ class ScreenSource(FrameSource):
             return
 
         monitors = self._capture.monitors
-        if len(monitors) <= 1:
+        if len(monitors) == 0:
             raise RuntimeError("No monitors found by mss.")
+        if len(monitors) == 1:
+            # Headless/virtual X11 can expose only the aggregate screen at index 0.
+            if monitor_index != 0:
+                raise RuntimeError(
+                    "No individual monitors found by mss. Use --monitor 0 for the aggregate screen."
+                )
+            monitor = monitors[0]
+            self._rect = {
+                "left": int(monitor["left"]),
+                "top": int(monitor["top"]),
+                "width": int(monitor["width"]),
+                "height": int(monitor["height"]),
+            }
+            return
         if monitor_index < 1 or monitor_index >= len(monitors):
             raise RuntimeError(
                 f"Monitor index {monitor_index} is out of range. Use --list-monitors to view valid indices."
@@ -115,42 +159,102 @@ class VideoCaptureSource(FrameSource):
         self._capture.release()
 
 
+class GrimScreenSource(FrameSource):
+    """Wayland screenshot source backed by the 'grim' utility."""
+
+    def __init__(self, region: Optional[Tuple[int, int, int, int]]) -> None:
+        if shutil.which("grim") is None:
+            raise RuntimeError(
+                "Wayland fallback requested but 'grim' is not installed. "
+                "Install it with: sudo apt install grim"
+            )
+        self._region = region
+        self._env = os.environ.copy()
+        if not self._env.get("XDG_RUNTIME_DIR"):
+            runtime_dir = f"/run/user/{os.getuid()}"
+            if os.path.isdir(runtime_dir):
+                self._env["XDG_RUNTIME_DIR"] = runtime_dir
+        if not self._env.get("WAYLAND_DISPLAY"):
+            runtime_dir = self._env.get("XDG_RUNTIME_DIR", "")
+            if runtime_dir and os.path.isdir(runtime_dir):
+                sockets = sorted(
+                    entry for entry in os.listdir(runtime_dir) if entry.startswith("wayland-")
+                )
+                if sockets:
+                    self._env["WAYLAND_DISPLAY"] = sockets[0]
+
+    def read(self) -> Optional[np.ndarray]:
+        command = ["grim", "-t", "ppm", "-"]
+        if self._region is not None:
+            left, top, width, height = self._region
+            command.extend(["-g", f"{left},{top} {width}x{height}"])
+
+        result = subprocess.run(command, capture_output=True, check=False, env=self._env)
+        if result.returncode != 0:
+            stderr = result.stderr.decode("utf-8", "replace").strip()
+            if stderr:
+                raise RuntimeError(f"Wayland capture failed via grim: {stderr}")
+            raise RuntimeError("Wayland capture failed via grim.")
+
+        data = np.frombuffer(result.stdout, dtype=np.uint8)
+        frame = cv2.imdecode(data, cv2.IMREAD_COLOR)
+        if frame is None:
+            raise RuntimeError("Wayland capture failed: invalid image data from grim.")
+        return frame
+
+
 def resolve_monitor_index(selector: str) -> int:
     with mss.mss() as capture:
         monitors = capture.monitors
 
-    monitor_count = len(monitors) - 1
-    if monitor_count <= 0:
+    if len(monitors) <= 0:
         raise RuntimeError("No monitors found by mss.")
+    monitor_count = len(monitors) - 1
+    aggregate_only = monitor_count == 0
 
     normalized = (selector or "").strip().lower()
     if normalized in ("", "auto", "last", "virtual"):
+        if aggregate_only:
+            return 0
         if monitor_count == 1:
             return 1
         return monitor_count
 
     if normalized in ("primary", "main"):
+        if aggregate_only:
+            return 0
         return 1
 
     try:
         index = int(normalized)
     except ValueError as exc:
         raise RuntimeError(
-            f"Invalid --monitor value '{selector}'. Use an index, 'auto', or 'primary'."
+            "Invalid --monitor value "
+            f"'{selector}'. Use an index, 'auto', or 'primary'."
         ) from exc
 
-    if index < 1 or index > monitor_count:
-        raise RuntimeError(
-            f"Monitor index {index} is out of range (valid: 1..{monitor_count})."
-        )
+    if aggregate_only:
+        if index != 0:
+            raise RuntimeError("Monitor index is out of range (valid: 0 for aggregate headless screen).")
+    elif index < 1 or index > monitor_count:
+        raise RuntimeError(f"Monitor index {index} is out of range (valid: 1..{monitor_count}).")
     return index
 
 
 def list_monitors() -> None:
     with mss.mss() as capture:
         monitors = capture.monitors
-        if len(monitors) <= 1:
-            print("No individual monitors were reported by mss.")
+        if len(monitors) <= 0:
+            print("No monitors were reported by mss.")
+            return
+
+        if len(monitors) == 1:
+            monitor = monitors[0]
+            print("Detected aggregate monitor (headless/virtual):")
+            print(
+                f"  0: left={monitor['left']}, top={monitor['top']}, "
+                f"width={monitor['width']}, height={monitor['height']}"
+            )
             return
 
         print("Detected monitors:")
@@ -308,7 +412,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--monitor",
-        default="auto",
+        default="auto" if os.name == "nt" else "primary",
         help="Monitor index or selector for screen source: index, 'auto', or 'primary'.",
     )
     parser.add_argument(
@@ -353,8 +457,34 @@ def create_source(args: argparse.Namespace) -> FrameSource:
             if width <= 0 or height <= 0:
                 raise RuntimeError("Region width and height must be greater than zero.")
             region_tuple = (left, top, width, height)
-        monitor_index = resolve_monitor_index(args.monitor)
-        return ScreenSource(monitor_index, region_tuple)
+
+        # First preference: MSS capture (fastest when available).
+        mss_error: Optional[Exception] = None
+        try:
+            monitor_index = resolve_monitor_index(args.monitor)
+            source = ScreenSource(monitor_index, region_tuple)
+            # Probe once so we can fail over early on unsupported backends.
+            _ = source.read()
+            return source
+        except Exception as exc:
+            mss_error = exc
+            try:
+                source.close()  # type: ignore[name-defined]
+            except Exception:
+                pass
+
+        # Linux/Wayland fallback: grim snapshot capture.
+        if os.name != "nt" and shutil.which("grim") is not None:
+            print("MSS screen capture unavailable; falling back to Wayland grim capture.")
+            return GrimScreenSource(region_tuple)
+
+        if mss_error is not None:
+            raise RuntimeError(
+                "Screen capture failed. "
+                "If your desktop uses Wayland, install grim and retry, "
+                "or use '--source camera'."
+            ) from mss_error
+        raise RuntimeError("Screen capture source could not be initialized.")
 
     if args.source == "camera":
         return VideoCaptureSource(args.camera_index, loop=False)

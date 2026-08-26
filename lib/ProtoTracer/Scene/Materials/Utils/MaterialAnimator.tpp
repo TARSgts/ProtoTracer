@@ -18,7 +18,7 @@ void MaterialAnimator<materialCount>::SetBaseMaterial(Material::Method method, M
 
 template<size_t materialCount>
 void MaterialAnimator<materialCount>::AddMaterial(Material::Method method, Material* material, uint16_t frames, float minOpacity, float maxOpacity) {
-    if (currentMaterials <= materialCount && baseMaterialSet) {
+    if (currentMaterials < materialCount && baseMaterialSet) {
         bool addValue = true;
         for (uint16_t i = 1; i < currentMaterials; i++) {
             if (dictionary[i] == material) {
@@ -38,7 +38,7 @@ void MaterialAnimator<materialCount>::AddMaterial(Material::Method method, Mater
 
 template<size_t materialCount>
 void MaterialAnimator<materialCount>::AddMaterialFrame(Material& material, float opacity) {
-    for (uint8_t i = 0; i <= currentMaterials; i++) {
+    for (uint8_t i = 0; i < currentMaterials; i++) {
         if (dictionary[i] == &material) {
             eEA.AddParameterFrame(i, opacity);
             break;
@@ -48,7 +48,7 @@ void MaterialAnimator<materialCount>::AddMaterialFrame(Material& material, float
 
 template<size_t materialCount>
 float MaterialAnimator<materialCount>::GetMaterialOpacity(Material& material) {
-    for (uint8_t i = 0; i <= currentMaterials; i++) {
+    for (uint8_t i = 0; i < currentMaterials; i++) {
         if (dictionary[i] == &material) {
             return eEA.GetValue(i);
             break;
@@ -62,7 +62,7 @@ template<size_t materialCount>
 void MaterialAnimator<materialCount>::Update() {
     eEA.Update(); // update material opacities
 
-    for (uint8_t i = 1; i <= currentMaterials; i++) { // link opacities
+    for (uint8_t i = 1; i < currentMaterials; i++) { // link opacities
         combineMaterial.SetOpacity(i, materialRatios[i]);
     }
 }

@@ -5,6 +5,9 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFaceSA, offsetFaceIndSA, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceARG, offsetFaceIndARG, 40, 0.0f, 1.0f);
     eEA.AddParameter(&offsetFaceOSC, offsetFaceIndOSC, 40, 0.0f, 1.0f);
+#ifdef ENABLE_FRACTAL_FACE
+    eEA.AddParameter(&offsetFaceFractal, offsetFaceIndFractal, 40, 0.0f, 1.0f);
+#endif
 #ifdef ENABLE_SORTING_FACE
     eEA.AddParameter(&offsetFaceSort, offsetFaceIndSort, 40, 0.0f, 1.0f);
 #endif
@@ -26,6 +29,9 @@ void ProtogenProject::LinkParameters(){
     eEA.AddParameter(&offsetFacePacman, offsetFaceIndPacman, 40, 0.0f, 1.0f);
 #ifdef ENABLE_SLOT_MACHINE_FACE
     eEA.AddParameter(&offsetFaceSlot, offsetFaceIndSlot, 40, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_DINO_FACE
+    eEA.AddParameter(&offsetFaceDino, offsetFaceIndDino, 40, 0.0f, 1.0f);
 #endif
 }
 
@@ -49,6 +55,9 @@ void ProtogenProject::SetMaterialLayers(){
     materialAnimator.AddMaterial(Material::Replace, &sA, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &aRG, 20, 0.0f, 1.0f);
     materialAnimator.AddMaterial(Material::Replace, &oSC, 20, 0.0f, 1.0f);
+#ifdef ENABLE_FRACTAL_FACE
+    materialAnimator.AddMaterial(Material::Replace, &fractal, 20, 0.0f, 1.0f);
+#endif
 #ifdef ENABLE_SORTING_FACE
     materialAnimator.AddMaterial(Material::Replace, &mergeSort, 20, 0.0f, 1.0f);
 #endif
@@ -71,6 +80,9 @@ void ProtogenProject::SetMaterialLayers(){
 #ifdef ENABLE_SLOT_MACHINE_FACE
     materialAnimator.AddMaterial(Material::Replace, &slotMachine, 20, 0.0f, 1.0f);
 #endif
+#ifdef ENABLE_DINO_FACE
+    materialAnimator.AddMaterial(Material::Replace, &dino, 20, 0.0f, 1.0f);
+#endif
 
     backgroundMaterial.SetBaseMaterial(Material::Add, Menu::GetMaterial());
     backgroundMaterial.AddMaterial(Material::Replace, &yellowMaterial, 40, 0.0f, 1.0f);//layer 1
@@ -87,6 +99,9 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &sA, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &aRG, 20, 0.0f, 1.0f);
     backgroundMaterial.AddMaterial(Material::Add, &oSC, 20, 0.0f, 1.0f);
+#ifdef ENABLE_FRACTAL_FACE
+    backgroundMaterial.AddMaterial(Material::Add, &fractal, 20, 0.0f, 1.0f);
+#endif
 #ifdef ENABLE_SORTING_FACE
     backgroundMaterial.AddMaterial(Material::Add, &mergeSort, 20, 0.0f, 1.0f);
 #endif
@@ -108,6 +123,9 @@ void ProtogenProject::SetMaterialLayers(){
     backgroundMaterial.AddMaterial(Material::Add, &pacman, 20, 0.0f, 1.0f);
 #ifdef ENABLE_SLOT_MACHINE_FACE
     backgroundMaterial.AddMaterial(Material::Add, &slotMachine, 20, 0.0f, 1.0f);
+#endif
+#ifdef ENABLE_DINO_FACE
+    backgroundMaterial.AddMaterial(Material::Add, &dino, 20, 0.0f, 1.0f);
 #endif
 }
 
@@ -152,6 +170,17 @@ void ProtogenProject::UpdateFFTVisemes(){
             mouthMagnitude = 0.0f;
 
         mouthMagnitude *= 1.2f + sensitivity * 0.6f;
+
+        // Reject idle-room noise before driving visemes.
+        constexpr float kMicNoiseGateBase = 0.12f;
+        constexpr float kMicNoiseGateMicLevelScale = 0.06f;
+        float micNoiseGate = kMicNoiseGateBase + (sensitivity * kMicNoiseGateMicLevelScale);
+        if(mouthMagnitude <= micNoiseGate){
+            mouthMagnitude = 0.0f;
+        } else {
+            mouthMagnitude = (mouthMagnitude - micNoiseGate) / (1.0f - micNoiseGate);
+        }
+
         if(mouthMagnitude > 1.0f)
             mouthMagnitude = 1.0f;
 
@@ -208,7 +237,7 @@ RGBColor ProtogenProject::GetSolidFaceColor(Color faceColor) const {
         case CGREEN:  return RGBColor(0, 255, 0);
         case CPURPLE: return RGBColor(255, 0, 255);
         case CRED:    return RGBColor(255, 0, 0);
-        case CBLUE:   return RGBColor(0, 0, 255);
+        case CBLUE:   return RGBColor(0, 128, 255);
         case CBLACK:  return RGBColor(0, 0, 0);
         default:      return RGBColor(0, 0, 0);
     }
@@ -358,6 +387,9 @@ void ProtogenProject::UpdateFace(float ratio) {
     aRG.SetRotation(ratio * 360.0f * 2.0f);
 
     oSC.SetHueAngle(ratio * 360.0f * 8.0f);
+#ifdef ENABLE_FRACTAL_FACE
+    fractal.SetHueAngle(ratio * 360.0f * 0.75f);
+#endif
     
     SetMaterialColor();
     RGBColor hueFront = RGBColor(255, 0, 0).HueShift(Menu::GetHueF() * 36);
@@ -732,6 +764,19 @@ void ProtogenProject::OscilloscopeFace(){
     OscilloscopeCallback();
 }
 
+#ifdef ENABLE_FRACTAL_FACE
+void ProtogenProject::FractalFace(){
+    fractal.Update((millis() % 12000) / 12000.0f);
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndFractal, 1.0f);
+
+    materialAnimator.AddMaterialFrame(fractal, offsetFaceFractal);
+    backgroundMaterial.AddMaterialFrame(fractal, offsetFaceFractal);
+    SetStripColorOverride(Color::CHORIZONTALRAINBOW);
+}
+#endif
+
 #ifdef ENABLE_SORTING_FACE
 void ProtogenProject::MergeSortFace(){
     mergeSort.Update();
@@ -829,6 +874,19 @@ void ProtogenProject::SlotMachineAutoFace(){
 
     materialAnimator.AddMaterialFrame(slotMachine, offsetFaceSlot);
     backgroundMaterial.AddMaterialFrame(slotMachine, offsetFaceSlot);
+}
+#endif
+
+#ifdef ENABLE_DINO_FACE
+void ProtogenProject::DinoAutoFace(){
+    dino.SetJumpPressed(IsBooped());
+    dino.Update();
+
+    eEA.AddParameterFrame(offsetFaceInd, 1.0f);
+    eEA.AddParameterFrame(offsetFaceIndDino, 1.0f);
+
+    materialAnimator.AddMaterialFrame(dino, offsetFaceDino);
+    backgroundMaterial.AddMaterialFrame(dino, offsetFaceDino);
 }
 #endif
 
@@ -960,6 +1018,10 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
 #ifdef ENABLE_SLOT_MACHINE_FACE
     slotMachine.SetSize(analyzerSize);
     slotMachine.SetPosition(analyzerPosition);
+#endif
+#ifdef ENABLE_DINO_FACE
+    dino.SetSize(analyzerSize);
+    dino.SetPosition(analyzerPosition);
 #endif
 
     hud.SetFaceMax(camMax);

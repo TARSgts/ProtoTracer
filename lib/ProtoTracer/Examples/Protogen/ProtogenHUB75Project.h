@@ -11,6 +11,9 @@
 #include "../../Assets/Textures/Static/DVDLogoImage.h"
 #include "../../Scene/Materials/Static/SimpleMaterial.h"
 #include "../../Scene/Materials/Animated/ConfettiParticles.h"
+#ifdef ENABLE_LAVA_LAMP_FACE
+#include "../../Scene/Materials/Animated/LavaLampMaterial.h"
+#endif
 
 #include "../../Camera/CameraManager/Implementations/HUB75DeltaCameras.h"
 #include "../../Controller/HUB75Controller.h"
@@ -32,11 +35,23 @@ private:
     // Render the real DVD logo sprite by default (falls back to cube/mesh via kDvdRenderMode).
     static constexpr DvdRenderMode kDvdRenderMode = DvdRenderMode::Sprite;
     static constexpr uint8_t kBaseFaceCount = 10;
-#ifdef ENABLE_SORTING_FACE
-    static constexpr uint8_t kSortFaceIndex = kBaseFaceCount;
-    static constexpr uint8_t kAfterSortFaceIndex = kBaseFaceCount + 1;
+#ifdef ENABLE_LAVA_LAMP_FACE
+    static constexpr uint8_t kLavaFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterLavaFaceIndex = kBaseFaceCount + 1;
 #else
-    static constexpr uint8_t kAfterSortFaceIndex = kBaseFaceCount;
+    static constexpr uint8_t kAfterLavaFaceIndex = kBaseFaceCount;
+#endif
+#ifdef ENABLE_FRACTAL_FACE
+    static constexpr uint8_t kFractalFaceIndex = kAfterLavaFaceIndex;
+    static constexpr uint8_t kAfterFractalFaceIndex = kAfterLavaFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterFractalFaceIndex = kAfterLavaFaceIndex;
+#endif
+#ifdef ENABLE_SORTING_FACE
+    static constexpr uint8_t kSortFaceIndex = kAfterFractalFaceIndex;
+    static constexpr uint8_t kAfterSortFaceIndex = kAfterFractalFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterSortFaceIndex = kAfterFractalFaceIndex;
 #endif
 #ifdef ENABLE_PONG_FACE
     static constexpr uint8_t kPongFaceIndex = kAfterSortFaceIndex;
@@ -74,11 +89,17 @@ private:
 #else
     static constexpr uint8_t kAfterSlotFaceIndex = kAfterLifeFaceIndex;
 #endif
-#ifdef ENABLE_GIF_FACE
-    static constexpr uint8_t kGifFaceIndex = kAfterSlotFaceIndex;
-    static constexpr uint8_t kAfterGifFaceIndex = kAfterSlotFaceIndex + 1;
+#ifdef ENABLE_DINO_FACE
+    static constexpr uint8_t kDinoFaceIndex = kAfterSlotFaceIndex;
+    static constexpr uint8_t kAfterDinoFaceIndex = kAfterSlotFaceIndex + 1;
 #else
-    static constexpr uint8_t kAfterGifFaceIndex = kAfterSlotFaceIndex;
+    static constexpr uint8_t kAfterDinoFaceIndex = kAfterSlotFaceIndex;
+#endif
+#ifdef ENABLE_GIF_FACE
+    static constexpr uint8_t kGifFaceIndex = kAfterDinoFaceIndex;
+    static constexpr uint8_t kAfterGifFaceIndex = kAfterDinoFaceIndex + 1;
+#else
+    static constexpr uint8_t kAfterGifFaceIndex = kAfterDinoFaceIndex;
 #endif
     static constexpr uint8_t kFaceCount = kAfterGifFaceIndex;
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
@@ -91,6 +112,9 @@ private:
     TexturedQuad dvdQuad; ///< Flat quad used when rendering the sprite-based DVD image.
     DVD_logo dvdImage = DVD_logo(Vector2D(), Vector2D()); ///< Sprite that emulates the printed DVD logo.
     SimpleMaterial dvdMaterial = SimpleMaterial(RGBColor(0, 255, 170));
+#ifdef ENABLE_LAVA_LAMP_FACE
+    LavaLampMaterial lavaLamp;
+#endif
     ConfettiParticles dvdConfetti = ConfettiParticles(Vector2D(192.0f, 94.0f), Vector2D(96.0f, 47.0f));
     TexturedQuad bsodQuad; ///< Quad used for the BSOD static image.
     BSOD_3 bsodImage = BSOD_3(Vector2D(), Vector2D()); ///< Static BSOD image material.
@@ -127,6 +151,9 @@ private:
 #ifdef ENABLE_USB_VIDEO_FACE
     USBVideoStreamPlayer usbVideoPlayer;
 #endif
+#ifdef ENABLE_LAVA_LAMP_FACE
+    bool lavaFaceActive = false;
+#endif
 
     // E 001 TARS : Add in a plane to the corner of the display to illuminate side panel
     SolidCube sideIllum;
@@ -143,6 +170,12 @@ private:
         F("OSCIL"),
         F("SPECTRUM"),
         F("DVDLOGO"),
+#ifdef ENABLE_LAVA_LAMP_FACE
+        F("LAVALMP"),
+#endif
+        #ifdef ENABLE_FRACTAL_FACE
+        F("FRACTAL"),
+        #endif
         #ifdef ENABLE_SORTING_FACE
         F("MERGESRT"),
         #endif
@@ -163,6 +196,9 @@ private:
         #endif
         #ifdef ENABLE_SLOT_MACHINE_FACE
         F("SLOT"),
+        #endif
+        #ifdef ENABLE_DINO_FACE
+        F("DINO"),
         #endif
         #ifdef ENABLE_GIF_FACE
         F("GIF"),
@@ -258,6 +294,26 @@ private:
         dvdConfettiActive = true;
         dvdConfettiEndMs = millis() + dvdConfettiDurationMs;
     }
+
+#ifdef ENABLE_LAVA_LAMP_FACE
+    RGBColor GetActiveFaceColor(float ratio) const {
+        switch (Menu::GetFaceColor()) {
+            case 0:  return RGBColor(255, 0, 0).HueShift(Menu::GetHueF() * 36.0f);
+            case 1:  return RGBColor(255, 255, 0);
+            case 2:  return RGBColor(255, 165, 0);
+            case 3:  return RGBColor(255, 255, 255);
+            case 4:  return RGBColor(0, 255, 0);
+            case 5:  return RGBColor(255, 0, 255);
+            case 6:  return RGBColor(255, 0, 0);
+            case 7:  return RGBColor(0, 128, 255);
+            case 8:  return RGBColor(255, 0, 0).HueShift(ratio * 360.0f * 0.85f);
+            case 9:  return RGBColor(255, 0, 0).HueShift(ratio * 360.0f * 0.45f);
+            case 10: return RGBColor(255, 0, 0).HueShift(ratio * 360.0f * 1.25f);
+            case 11: return RGBColor(0, 0, 0);
+            default: return RGBColor(255, 255, 255);
+        }
+    }
+#endif
 
     void UpdateDvdConfetti() {
         dvdConfetti.Update();
@@ -466,6 +522,19 @@ private:
         bsodImage.SetPosition(Vector2D(worldCenter.X, worldCenter.Y));
     }
 
+#ifdef ENABLE_LAVA_LAMP_FACE
+    void LavaLampFace(float ratio) {
+        RGBColor activeColor = GetActiveFaceColor(ratio);
+        lavaLamp.SetPalette(activeColor);
+        lavaLamp.Update();
+
+        // Render lava on the full background plane and hide facial geometry to avoid feature bleed-through.
+        pM.GetObject()->Disable();
+        AddBackgroundMaterialFrame(lavaLamp, 1.0f);
+        SetStripColorOverride(Color::CRAINBOWNOISE);
+    }
+#endif
+
     void SpectrumAnalyzerCallback() override {
         AddMaterialFrame(Color::CHORIZONTALRAINBOW, 0.8f);
         SetStripColorOverride(Color::CHORIZONTALRAINBOW);
@@ -513,8 +582,16 @@ public:
         bsodQuad.GetObject()->SetMaterial(&bsodImage);
         dvdConfetti.SetSize(GetCameraSize());
         dvdConfetti.SetPosition(GetCameraSize().Divide(2.0f));
+#ifdef ENABLE_LAVA_LAMP_FACE
+        lavaLamp.SetSize(GetCameraSize());
+        lavaLamp.SetPosition(GetCameraSize().Divide(2.0f));
+#endif
         AddMaterial(Material::Add, &dvdConfetti, 12, 0.0f, 1.0f);
         AddBackgroundMaterial(Material::Add, &dvdConfetti, 12, 0.0f, 1.0f);
+#ifdef ENABLE_LAVA_LAMP_FACE
+        AddMaterial(Material::Replace, &lavaLamp, 12, 0.0f, 1.0f);
+        AddBackgroundMaterial(Material::Replace, &lavaLamp, 12, 0.0f, 1.0f);
+#endif
         AdvanceDvdColor();
         SetDVDConfettiEnabled(true);
         GetDvdObject()->Disable(); // hidden until the DVD face is selected
@@ -546,6 +623,9 @@ public:
         GetDvdObject()->Disable();
         bsodQuad.GetObject()->Disable();
         pM.GetObject()->Enable();
+#ifdef ENABLE_LAVA_LAMP_FACE
+        lavaFaceActive = false;
+#endif
         bool gifDecoding = false;
         bool externalFrameProvider = false;
 #ifdef ENABLE_GIF_FACE
@@ -596,6 +676,11 @@ public:
 
         if (!externalFrameProvider) {
             UpdateFace(ratio);
+#ifdef ENABLE_LAVA_LAMP_FACE
+            if (lavaFaceActive) {
+                LavaLampFace(ratio);
+            }
+#endif
 
             pM.Update();
 
@@ -624,8 +709,14 @@ public:
     void SelectFace(uint8_t code) {
         ClearStripColorOverride();
         if (IsBooped() && code != 6 && code != 9
+#ifdef ENABLE_LAVA_LAMP_FACE
+            && code != kLavaFaceIndex
+#endif
 #ifdef ENABLE_SLOT_MACHINE_FACE
             && code != kSlotFaceIndex
+#endif
+#ifdef ENABLE_DINO_FACE
+            && code != kDinoFaceIndex
 #endif
         ) {
             Surprised();
@@ -643,6 +734,12 @@ public:
             case 7: OscilloscopeFace();             break;
             case 8: SpectrumAnalyzerFace();         break;
             case 9: DVDLogoFace(0.0f);              break;
+#ifdef ENABLE_LAVA_LAMP_FACE
+            case kLavaFaceIndex: lavaFaceActive = true; break;
+#endif
+#ifdef ENABLE_FRACTAL_FACE
+            case kFractalFaceIndex: FractalFace(); break;
+#endif
 #ifdef ENABLE_SORTING_FACE
             case kSortFaceIndex: MergeSortFace();   break;
 #endif
@@ -663,6 +760,9 @@ public:
 #endif
 #ifdef ENABLE_SLOT_MACHINE_FACE
             case kSlotFaceIndex: SlotMachineAutoFace(); break;
+#endif
+#ifdef ENABLE_DINO_FACE
+            case kDinoFaceIndex: DinoAutoFace();        break;
 #endif
 #ifdef ENABLE_GIF_FACE
             case kGifFaceIndex: GifFace();              break;

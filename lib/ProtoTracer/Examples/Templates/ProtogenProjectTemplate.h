@@ -30,6 +30,9 @@
 #include "../../Scene/Materials/Animated/SpectrumAnalyzer.h"
 #include "../../Scene/Materials/Animated/AudioReactiveGradient.h"
 #include "../../Scene/Materials/Animated/Oscilloscope.h"
+#ifdef ENABLE_FRACTAL_FACE
+#include "../../Scene/Materials/Animated/FractalMaterial.h"
+#endif
 #ifdef ENABLE_SORTING_FACE
 #include "../../Scene/Materials/Animated/MergeSortVisualizer.h"
 #endif
@@ -53,6 +56,9 @@
 #include "../../Scene/Materials/Animated/Pacman.h"
 #ifdef ENABLE_SLOT_MACHINE_FACE
 #include "../../Scene/Materials/Animated/SlotMachine.h"
+#endif
+#ifdef ENABLE_DINO_FACE
+#include "../../Scene/Materials/Animated/DinoGame.h"
 #endif
 #include "../../Animation/AnimationTracks/BlinkTrack.h"
 #include "../../Utils/Signals/FunctionGenerator.h"
@@ -157,7 +163,7 @@ private:
     SimpleMaterial orangeMaterial = SimpleMaterial(RGBColor(255, 165, 0)); ///< Solid orange material.
     SimpleMaterial whiteMaterial  = SimpleMaterial(RGBColor(255, 255, 255)); ///< Solid white material.
     SimpleMaterial greenMaterial  = SimpleMaterial(RGBColor(0, 255, 0));   ///< Solid green material.
-    SimpleMaterial blueMaterial   = SimpleMaterial(RGBColor(0, 0, 255));   ///< Solid blue material.
+    SimpleMaterial blueMaterial   = SimpleMaterial(RGBColor(0, 128, 255)); ///< Solid cyan-leaning blue material.
     SimpleMaterial yellowMaterial = SimpleMaterial(RGBColor(255, 255, 0)); ///< Solid yellow material.
     SimpleMaterial purpleMaterial = SimpleMaterial(RGBColor(255, 0, 255)); ///< Solid purple material.
     SimpleMaterial blackMaterial  = SimpleMaterial(RGBColor(0, 0, 0));     ///< Solid black material.
@@ -171,8 +177,8 @@ private:
     /**
      * @brief Material animators for face and background layering.
      */
-    MaterialAnimator<24> materialAnimator;   ///< Handles layering of face materials.
-    MaterialAnimator<24> backgroundMaterial; ///< Handles layering of background materials.
+    MaterialAnimator<32> materialAnimator;   ///< Handles layering of face materials.
+    MaterialAnimator<32> backgroundMaterial; ///< Handles layering of background materials.
     
     /**
      * @brief Audio-reactive materials.
@@ -180,6 +186,9 @@ private:
     SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), true, true); 
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
+#ifdef ENABLE_FRACTAL_FACE
+    FractalMaterial fractal = FractalMaterial(Vector2D(200, 100), Vector2D(100, 50));
+#endif
 #ifdef ENABLE_SORTING_FACE
     MergeSortVisualizer mergeSort = MergeSortVisualizer(Vector2D(200, 100), Vector2D(0, 0));
 #endif
@@ -201,6 +210,9 @@ private:
     PacmanMaterial pacman = PacmanMaterial(Vector2D(200, 100), Vector2D(0, 0));
 #ifdef ENABLE_SLOT_MACHINE_FACE
     SlotMachineMaterial slotMachine = SlotMachineMaterial(Vector2D(200, 100), Vector2D(0, 0));
+#endif
+#ifdef ENABLE_DINO_FACE
+    DinoGameMaterial dino = DinoGameMaterial(Vector2D(200, 100), Vector2D(0, 0));
 #endif
     // --- Project controllers ---
     BlinkTrack<2> blink; ///< Blink track handler.
@@ -248,6 +260,9 @@ private:
     float offsetFaceSA  = 0.0f;  ///< Offset for SpectrumAnalyzer face.
     float offsetFaceARG = 0.0f;  ///< Offset for AudioReactiveGradient face.
     float offsetFaceOSC = 0.0f;  ///< Offset for Oscilloscope face.
+#ifdef ENABLE_FRACTAL_FACE
+    float offsetFaceFractal = 0.0f; ///< Offset for Fractal face.
+#endif
 #ifdef ENABLE_SORTING_FACE
     float offsetFaceSort = 0.0f; ///< Offset for MergeSort face.
 #endif
@@ -270,10 +285,16 @@ private:
 #ifdef ENABLE_SLOT_MACHINE_FACE
     float offsetFaceSlot = 0.0f; ///< Offset for Slot Machine face.
 #endif
+#ifdef ENABLE_DINO_FACE
+    float offsetFaceDino = 0.0f; ///< Offset for Dino Game face.
+#endif
     uint8_t offsetFaceInd    = 50; ///< Index for generic face offset in EasyEaseAnimator.
     uint8_t offsetFaceIndSA  = 51; ///< Index for SpectrumAnalyzer offset in EasyEaseAnimator.
     uint8_t offsetFaceIndARG = 52; ///< Index for AudioReactiveGradient offset in EasyEaseAnimator.
     uint8_t offsetFaceIndOSC = 53; ///< Index for Oscilloscope offset in EasyEaseAnimator.
+#ifdef ENABLE_FRACTAL_FACE
+    uint8_t offsetFaceIndFractal = 55; ///< Index for Fractal offset in EasyEaseAnimator.
+#endif
 #ifdef ENABLE_SORTING_FACE
     uint8_t offsetFaceIndSort = 54; ///< Index for MergeSort offset in EasyEaseAnimator.
 #endif
@@ -295,6 +316,9 @@ private:
     uint8_t offsetFaceIndPacman = 60; ///< Index for Pacman offset in EasyEaseAnimator.
 #ifdef ENABLE_SLOT_MACHINE_FACE
     uint8_t offsetFaceIndSlot = 61; ///< Index for Slot Machine offset in EasyEaseAnimator.
+#endif
+#ifdef ENABLE_DINO_FACE
+    uint8_t offsetFaceIndDino = 63; ///< Index for Dino Game offset in EasyEaseAnimator.
 #endif
     /**
      * @brief Links internal parameters to the EasyEaseAnimator or other controllers.
@@ -673,6 +697,13 @@ protected:
      */
     void OscilloscopeFace();
 
+#ifdef ENABLE_FRACTAL_FACE
+    /**
+     * @brief Enables the Fractal face.
+     */
+    void FractalFace();
+#endif
+
 #ifdef ENABLE_SORTING_FACE
     /**
      * @brief Enables the merge sort visualizer face.
@@ -725,6 +756,13 @@ protected:
      * @brief Enables the Slot Machine auto-play face.
      */
     void SlotMachineAutoFace();
+#endif
+
+#ifdef ENABLE_DINO_FACE
+    /**
+     * @brief Enables the Dino Game face; boop the sensor to jump over obstacles.
+     */
+    void DinoAutoFace();
 #endif
 
     /**
