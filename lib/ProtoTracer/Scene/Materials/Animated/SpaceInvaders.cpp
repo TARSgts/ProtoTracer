@@ -45,7 +45,6 @@ void SpaceInvadersMaterial::ResetWave() {
     invaderDrop = 0.0f;
     invaderMoveTimer = 0.0f;
     invaderMoveInterval = 0.45f;
-    invaderTopRow = 0;
 
     playerX = 0.0f;
     playerShotActive = false;
@@ -71,11 +70,6 @@ float SpaceInvadersMaterial::GetInvaderRowY(uint8_t row) const {
 float SpaceInvadersMaterial::GetInvaderColX(uint8_t col) const {
     Vector2D origin = GetInvaderOrigin();
     return origin.X + float(col) * (invaderSize + invaderSpacing);
-}
-
-bool SpaceInvadersMaterial::IsInvaderAlive(uint8_t row, uint8_t col) const {
-    if (row >= kRows || col >= kCols) return false;
-    return alive[row][col];
 }
 
 void SpaceInvadersMaterial::KillInvader(uint8_t row, uint8_t col) {

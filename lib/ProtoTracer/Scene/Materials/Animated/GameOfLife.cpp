@@ -93,7 +93,6 @@ void GameOfLifeMaterial::RecalculateDimensions() {
 
     gridHalfWidth = cellSize * static_cast<float>(gridWidth) * 0.5f;
     gridHalfHeight = cellSize * static_cast<float>(gridHeight) * 0.5f;
-    cellPadding = 0.0f;
 
     float maxDimension = Mathematics::Max(static_cast<float>(gridWidth), static_cast<float>(gridHeight));
     float densityScale = maxDimension / 18.0f;
@@ -174,16 +173,10 @@ uint8_t GameOfLifeMaterial::CountNeighbors(int16_t x, int16_t y) const {
             int16_t nx = x + dx;
             int16_t ny = y + dy;
 
-            if (wrapEdges) {
-                if (nx < 0) nx += gridWidth;
-                if (ny < 0) ny += gridHeight;
-                if (nx >= gridWidth) nx -= gridWidth;
-                if (ny >= gridHeight) ny -= gridHeight;
-            } else {
-                if (nx < 0 || ny < 0 || nx >= gridWidth || ny >= gridHeight) {
-                    continue;
-                }
-            }
+            if (nx < 0) nx += gridWidth;
+            if (ny < 0) ny += gridHeight;
+            if (nx >= gridWidth) nx -= gridWidth;
+            if (ny >= gridHeight) ny -= gridHeight;
 
             count += (cells[ny][nx] != 0) ? 1 : 0;
         }
@@ -255,11 +248,6 @@ RGBColor GameOfLifeMaterial::GetRGB(const Vector3D& position, const Vector3D& /*
     if (col < 0 || row < 0 || col >= gridWidth || row >= gridHeight) {
         return backgroundColor;
     }
-
-    float localX = (relative.X - originX) - static_cast<float>(col) * cellSize;
-    float localY = (relative.Y - originY) - static_cast<float>(row) * cellSize;
-    if (localX < cellPadding || localX > (cellSize - cellPadding)) return backgroundColor;
-    if (localY < cellPadding || localY > (cellSize - cellPadding)) return backgroundColor;
 
     return cells[row][col] ? aliveColor : backgroundColor;
 }

@@ -33,7 +33,6 @@ private:
     float angle = 0.0f; ///< Rotation angle of the gradient.
     float hueAngle = 0.0f; ///< Hue angle for color adjustments.
     float radius = 0.0f; ///< Radius for circular gradient patterns.
-    uint8_t colors; ///< Number of colors in the gradient.
     float* data; ///< Pointer to the audio data array.
     float bounceData[128]; ///< Processed bounce data for audio reactivity.
     uint8_t bins = 128; ///< Number of bins for audio data processing.

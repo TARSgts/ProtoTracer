@@ -29,7 +29,6 @@ private:
     Vector2D offset; ///< Offset position of the visualization area.
     float angle = 0.0f; ///< Rotation angle of the visualization.
     float hueAngle = 0.0f; ///< Hue adjustment angle for the spectrum colors.
-    uint8_t colors; ///< Number of colors in the gradient.
     float* data; ///< Pointer to the input audio data.
     float bounceData[128]; ///< Processed bounce data for visualization.
     float processedData[128] = {0.0f}; ///< Locally processed spectrum values.

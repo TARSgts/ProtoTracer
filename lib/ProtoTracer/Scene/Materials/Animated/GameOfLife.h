@@ -14,7 +14,6 @@ private:
     uint8_t gridWidth = 0;
     uint8_t gridHeight = 0;
     float cellSize = 6.0f;
-    float cellPadding = 1.0f;
     float gridHalfWidth = 0.0f;
     float gridHalfHeight = 0.0f;
 
@@ -28,7 +27,6 @@ private:
     uint32_t history[kHashHistory] = {};
     uint8_t historyCount = 0;
     uint8_t historyIndex = 0;
-    bool wrapEdges = true;
 
     RGBColor backgroundColor = RGBColor(0, 0, 0);
     RGBColor aliveColor = RGBColor(40, 220, 120);

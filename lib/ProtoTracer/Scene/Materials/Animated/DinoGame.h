@@ -27,7 +27,6 @@ private:
     static constexpr uint8_t kCloudCount = 3;
     float cloudX[kCloudCount];
     float cloudY[kCloudCount];
-    bool cloudsInitialized = false;
 
     float groundHeight = 3.0f;
     float obstacleSpeed = 55.0f;
@@ -37,7 +36,6 @@ private:
     float minGapPixels = 40.0f;
     float gravity = -220.0f;
     float jumpVelocity = 95.0f;
-    float apexHeight = 20.0f; ///< Peak jump height, used to keep obstacles reachable.
     float survivalTime = 0.0f;
     float distance = 0.0f;
     uint32_t score = 0;

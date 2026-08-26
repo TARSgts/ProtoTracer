@@ -68,17 +68,19 @@ RGBColor AudioReactiveGradient::GetRGB(const Vector3D& position, const Vector3D&
     Vector2D rPos = Mathematics::IsClose(angle, 0.0f, 0.1f) ? Vector2D(position.X, position.Y) - offset : Vector2D(position.X, position.Y).Rotate(angle, offset) - offset;
 
     // Outside of size bounds
-    if (-size.X > rPos.X && size.X < rPos.X) return RGBColor();
-    if (-size.Y > rPos.Y && size.Y < rPos.Y) return RGBColor();
+    if (rPos.X < -size.X || rPos.X > size.X) return RGBColor();
+    if (rPos.Y < -size.Y || rPos.Y > size.Y) return RGBColor();
 
     // Convert to polar coordinates
     float tX = rPos.X;
     rPos.X = atan2f(rPos.Y, rPos.X) / (2.0f * Mathematics::MPI) * size.Y;
     rPos.Y = sqrtf(tX * tX + rPos.Y * rPos.Y);
 
-    uint8_t x = uint8_t(Mathematics::Map(rPos.X, -size.X, size.X, float(bins), 0.0f));
-
-    if (bins > x && 0 > x) return RGBColor();
+    // Clamped to [0, bins-2] (not just [0, bins-1]) since data[x+1]/bounceData[x+1] below
+    // reads one bin ahead for interpolation -- letting x reach bins-1 would read past the
+    // end of the 128-element array.
+    float xMapped = Mathematics::Map(rPos.X, -size.X, size.X, float(bins), 0.0f);
+    uint8_t x = static_cast<uint8_t>(Mathematics::Constrain(xMapped, 0.0f, float(bins - 2)));
 
     float xDistance = size.X / float(bins) * x - size.X;
     float xDistance2 = size.X / float(bins) * (x + 1) - size.X;

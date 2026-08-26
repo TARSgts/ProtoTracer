@@ -46,7 +46,7 @@ private:
     static RGBColor LiftColor(const RGBColor& color, uint8_t amount);
 
     void RecomputeBounds();
-    void ResetBlob(uint8_t index, bool randomHeight);
+    void ResetBlob(uint8_t index);
     void ResolveBlobSeparation(float dt);
 
 public:

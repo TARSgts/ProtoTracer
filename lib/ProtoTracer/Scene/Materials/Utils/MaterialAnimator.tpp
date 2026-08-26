@@ -9,6 +9,7 @@ void MaterialAnimator<materialCount>::SetBaseMaterial(Material::Method method, M
         combineMaterial.SetMaterial(0, material);
         combineMaterial.SetMethod(0, method);
         combineMaterial.SetOpacity(0, 1.0f);
+        dictionary[0] = material;
     }
     else {
         baseMaterialSet = true;

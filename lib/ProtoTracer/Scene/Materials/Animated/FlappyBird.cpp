@@ -131,7 +131,7 @@ void FlappyBirdMaterial::Update() {
         if (flapCooldown < 0.0f) flapCooldown = 0.0f;
     }
 
-    float maxX = pipeX[0];
+    float maxX = -INFINITY;
     for (uint8_t i = 0; i < kPipeCount; ++i) {
         pipeX[i] -= pipeSpeed * delta;
         if (pipeX[i] > maxX) maxX = pipeX[i];

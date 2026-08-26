@@ -54,7 +54,7 @@ LavaLampMaterial::LavaLampMaterial(Vector2D dimensions, Vector2D center)
       offset(center) {
     RecomputeBounds();
     for (uint8_t i = 0; i < kBlobCount; ++i) {
-        ResetBlob(i, true);
+        ResetBlob(i);
     }
 }
 
@@ -63,7 +63,7 @@ void LavaLampMaterial::RecomputeBounds() {
     halfHeight = size.Y * 0.5f;
 }
 
-void LavaLampMaterial::ResetBlob(uint8_t index, bool randomHeight) {
+void LavaLampMaterial::ResetBlob(uint8_t index) {
     Blob& blob = blobs[index];
 
     blob.radius = 5.5f + Random01() * 3.7f;
@@ -84,16 +84,11 @@ void LavaLampMaterial::ResetBlob(uint8_t index, bool randomHeight) {
     blob.x = blob.anchorX + (Random01() - 0.5f) * laneWidth * 0.35f;
     blob.x = Clamp(blob.x, -spanX, spanX);
 
-    if (randomHeight) {
-        float spanY = halfHeight - blob.radius - 1.0f;
-        if (spanY < 2.0f) spanY = 2.0f;
-        blob.y = (Random01() - 0.5f) * spanY * 2.0f;
-        if (Random01() < 0.4f) {
-            blob.vy = -blob.vy;
-        }
-    } else {
-        blob.y = -halfHeight + blob.radius + 1.5f;
-        blob.vy = fabsf(blob.vy);
+    float spanY = halfHeight - blob.radius - 1.0f;
+    if (spanY < 2.0f) spanY = 2.0f;
+    blob.y = (Random01() - 0.5f) * spanY * 2.0f;
+    if (Random01() < 0.4f) {
+        blob.vy = -blob.vy;
     }
 }
 
@@ -101,7 +96,7 @@ void LavaLampMaterial::SetSize(Vector2D dimensions) {
     size = dimensions;
     RecomputeBounds();
     for (uint8_t i = 0; i < kBlobCount; ++i) {
-        ResetBlob(i, true);
+        ResetBlob(i);
     }
 }
 

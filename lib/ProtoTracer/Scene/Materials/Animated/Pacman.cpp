@@ -51,9 +51,8 @@ void PacmanMaterial::SetupPellets() {
         pelletCount = 0;
         return;
     }
-    uint8_t count = static_cast<uint8_t>(available / pelletSpacing);
-    if (count > kMaxPellets) count = kMaxPellets;
-    pelletCount = count;
+    float countF = Mathematics::Min(available / pelletSpacing, static_cast<float>(kMaxPellets));
+    pelletCount = static_cast<uint8_t>(countF);
 
     float startX = leftBound + pacmanRadius;
     for (uint8_t i = 0; i < pelletCount; ++i) {

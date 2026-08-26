@@ -184,9 +184,6 @@ void DinoGameMaterial::RecalculateDimensions() {
     maxObstacleSpeed = minObstacleSpeed * 2.2f;
     gravity = -Mathematics::Max(150.0f, size.Y * 4.5f);
     jumpVelocity = Mathematics::Max(90.0f, size.Y * 2.35f);
-    // Peak jump height reachable with the above gravity/velocity; each fixed cactus
-    // size is verified against this so it's always jumpable with margin.
-    apexHeight = (jumpVelocity * jumpVelocity) / (2.0f * fabsf(gravity));
 
     speedRampPerSecond = (maxObstacleSpeed - minObstacleSpeed) / kSpeedRampSeconds;
     minGapPixels = size.X * 0.35f;
@@ -235,7 +232,6 @@ void DinoGameMaterial::ResetClouds() {
         cloudX[i] = -size.X + xt * (size.X * 2.0f);
         cloudY[i] = skyBottom + yt * Mathematics::Max(1.0f, (skyTop - skyBottom));
     }
-    cloudsInitialized = true;
 }
 
 void DinoGameMaterial::UpdateClouds(float delta) {

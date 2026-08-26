@@ -9,7 +9,6 @@ namespace {
 constexpr float kMaxDelta = 0.05f;
 constexpr float kHitAngleScale = 0.45f;
 constexpr float kRightPaddleAimOffset = 0.08f;
-constexpr float kDashScale = 0.5f;
 }
 
 PongFace::PongFace(Vector2D dimensions, Vector2D center)

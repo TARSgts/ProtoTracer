@@ -15,7 +15,6 @@ private:
 
     float invaderStep = 0.0f;
     int8_t invaderDir = 1;
-    uint8_t invaderTopRow = 0;
     float invaderDrop = 0.0f;
     float invaderMoveTimer = 0.0f;
     float invaderMoveInterval = 0.45f;
@@ -49,7 +48,6 @@ private:
     void UpdatePlayer(float delta);
     void UpdateShots(float delta);
     Vector2D GetInvaderOrigin() const;
-    bool IsInvaderAlive(uint8_t row, uint8_t col) const;
     void KillInvader(uint8_t row, uint8_t col);
     bool AllInvadersCleared() const;
     float GetInvaderRowY(uint8_t row) const;
