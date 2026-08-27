@@ -66,8 +66,15 @@ Vector2D PixelGroup<pixelCount>::GetCoordinate(uint16_t count){
         float row = count % rowCount;
         float col = (count - row) / rowCount;
 
-        tempLocation.X = Mathematics::Map(row, 0.0f, float(rowCount), position.X, position.X + size.X);
-        tempLocation.Y = Mathematics::Map(col, 0.0f, float(colCount), position.Y, position.Y + size.Y);
+        // Sample each cell's CENTER (row/col + 0.5), not its origin corner. Map(row, 0,
+        // rowCount, ...) alone puts index 0 exactly on the lower bound (zero margin) and
+        // index rowCount-1 one full pitch short of the upper bound -- an asymmetry that
+        // left the outermost row/column of physical LEDs sitting right on (or just inside)
+        // a material's boundary check with little to no floating-point slack, which showed
+        // up as flicker at the edges of the screen. Centering gives every edge the same
+        // half-pitch margin.
+        tempLocation.X = Mathematics::Map(row + 0.5f, 0.0f, float(rowCount), position.X, position.X + size.X);
+        tempLocation.Y = Mathematics::Map(col + 0.5f, 0.0f, float(colCount), position.Y, position.Y + size.Y);
 
         return tempLocation;
     }
