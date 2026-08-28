@@ -176,7 +176,7 @@
  * @def ENABLE_LAVA_LAMP_FACE
  * @brief Enables the lava lamp face.
  */
-//#define ENABLE_LAVA_LAMP_FACE
+#define ENABLE_LAVA_LAMP_FACE
 #if DOXYGEN
 #define ENABLE_LAVA_LAMP_FACE
 #endif
