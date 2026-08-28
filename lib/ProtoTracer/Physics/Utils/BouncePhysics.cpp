@@ -43,11 +43,18 @@ float BouncePhysics::Calculate(float velocity, float dT) {
 
     previousVelocity = velocity;
 
-    // currentPosition is already clamped to [0, 1] above -- returning currentPosition +
-    // velocity (the raw, unclamped input) defeated that clamp entirely, letting the
-    // reported "bounce" value reach up to 2.0 for a loud, sustained input. Every caller
-    // (AudioReactiveGradient's circular/bar visualizers, SpectrumAnalyzer's bars) treats
-    // this return value as a 0-1 magnitude, so an unbounded 2x overshoot made them "max
-    // out" at roughly half the input level a properly-bounded value would need.
-    return currentPosition;
+    // currentPosition alone is NOT the visible signal -- with gravity*dT (3.5 at the
+    // gravity=35/dT=0.1 values every caller uses) usually exceeding changeRate for
+    // ordinary, gradually-varying audio, currentVelocity is negative almost all the time
+    // and currentPosition sits clamped at 0 except during sudden onset spikes. The raw
+    // `velocity` term carries the actual sustained/baseline level; currentPosition only
+    // adds an extra transient "kick" on top. Returning currentPosition alone (a prior,
+    // reverted fix attempt) made both audio visualizers go dark since their normal,
+    // continuously-varying input rarely produces a nonzero currentPosition at all.
+    // The real bug was that this sum was never clamped -- letting it reach up to 2.0 for
+    // loud, sustained input and defeat every caller's assumption of a [0,1] magnitude.
+    float result = currentPosition + velocity;
+    if (result < 0.0f) result = 0.0f;
+    if (result > 1.0f) result = 1.0f;
+    return result;
 }
