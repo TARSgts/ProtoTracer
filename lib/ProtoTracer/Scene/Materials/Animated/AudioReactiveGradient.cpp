@@ -91,9 +91,18 @@ RGBColor AudioReactiveGradient::GetRGB(const Vector3D& position, const Vector3D&
 
     float inside = 1.0f - (height * 4.0f + 0.15f) - yColor;
 
+    // Circular mode has no explicit disk clip -- its shape depends entirely on the ring
+    // band (radius +/- height*150) staying thinner than the square canvas. At loud volume
+    // (height approaching/exceeding 1.0), that band already exceeds this material's own
+    // half-extent (e.g. a 160x160 canvas is only 80 units from center to edge), so the
+    // ring swallows the whole square, including its corners -- the "becomes a square at
+    // max volume" bug. Clip to the inscribed circle explicitly so it can never draw
+    // outside a circle regardless of how large the audio-driven ring thickness gets.
+    bool insideDisk = rPos.Y <= Mathematics::Min(size.X, size.Y);
+
     if (!circular && inside < 0.0f) {
         return material->GetRGB(Vector3D(1.0f - height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
-    } else if (circular && rPos.Y + height * 150.0f > radius - 5.0f && rPos.Y - height * 150.0f < radius - 5.0f) {
+    } else if (circular && insideDisk && rPos.Y + height * 150.0f > radius - 5.0f && rPos.Y - height * 150.0f < radius - 5.0f) {
         if (rPos.Y - height * 50.0f > 75.0f) {
             return material->GetRGB(Vector3D(1.0f + height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
         } else if (rPos.Y - height * 50.0f < 125.0f) {
