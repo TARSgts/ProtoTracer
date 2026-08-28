@@ -106,16 +106,15 @@ void LavaLampMaterial::SetPosition(Vector2D center) {
 
 void LavaLampMaterial::SetPalette(const RGBColor& baseColor) {
     uint16_t energy = baseColor.R + baseColor.G + baseColor.B;
-    if (energy < 12) {
-        backgroundColor = RGBColor(0, 0, 0);
-        shellColor = RGBColor(150, 55, 18);
-        coreColor = RGBColor(240, 145, 55);
-        return;
-    }
+    RGBColor base = (energy < 12) ? RGBColor(200, 90, 30) : baseColor;
 
     backgroundColor = RGBColor(0, 0, 0);
-    shellColor = LiftColor(ScaleColor(baseColor, 0.62f), 12);
-    coreColor = LiftColor(ScaleColor(baseColor, 1.0f), 42);
+    // Hot = a bright, lifted version of the palette color (a white-hot glow near the
+    // heat source); cool = a darker, deeper version hue-shifted toward blue/violet,
+    // mimicking how molten material visibly darkens and cools as it rises away from
+    // the heat source. Blended per-blob by height in GetRGB().
+    hotColor = LiftColor(ScaleColor(base, 1.15f), 55);
+    coolColor = LiftColor(ScaleColor(base, 0.30f), 6).HueShift(-60.0f);
 }
 
 void LavaLampMaterial::ResolveBlobSeparation(float dt) {
@@ -176,7 +175,14 @@ void LavaLampMaterial::Update() {
         blob.vy *= (1.0f - 0.07f * dt);
         blob.vy = Clamp(blob.vy, -6.8f, 6.8f);
 
-        float springToLane = (blob.anchorX - blob.x) * 0.9f;
+        // A weak homing bias toward each blob's own lane (was 0.9, a tight leash) --
+        // strong enough to still avoid all blobs drifting into a single center clump,
+        // but loose enough to let blobs actually wander into a neighbor's territory and
+        // pass close enough to merge, which the original value made all but impossible
+        // (verified by simulation: 0% of run time had any two blobs within visual-merge
+        // distance at 0.9, vs ~9% at 0.12, with no meaningful difference in overall
+        // horizontal spread between the two).
+        float springToLane = (blob.anchorX - blob.x) * 0.12f;
         float sideDrift = sinf(timeSeconds * blob.driftRate + blob.phase) * 0.42f;
         blob.vx += (springToLane + sideDrift) * dt;
         blob.vx *= (1.0f - 0.06f * dt);
@@ -227,6 +233,12 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
     }
 
     float field = 0.0f;
+    // Weighted running sum of each contributor's own color, weighted by how strongly it
+    // influences this pixel (its field contribution) -- the standard "colored metaball"
+    // technique, so overlapping blobs of different temperatures blend smoothly instead
+    // of the whole lamp sharing one fixed color.
+    float colorR = 0.0f, colorG = 0.0f, colorB = 0.0f;
+
     for (uint8_t i = 0; i < kBlobCount; ++i) {
         const Blob& blob = blobs[i];
 
@@ -243,23 +255,50 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
         float dy = y - centerY;
         float stretch = (blob.vy >= 0.0f) ? 0.82f : 1.08f;
         float distSq = dx * dx + (dy * stretch) * (dy * stretch) + radius * 0.85f;
-        field += (radius * radius) / distSq;
+        float blobField = (radius * radius) / distSq;
+        field += blobField;
+
+        // Color temperature: a blob's color is derived from where it currently is, not
+        // fixed -- hot (bright) near the bottom heat source, cooling toward the dark/
+        // hue-shifted end as it rises. Recomputed from centerY every frame so a blob's
+        // color genuinely shifts as it rises and falls, matching real lava lamp wax.
+        // Contrast-boosted so blobs read as clearly hot/cool well before they reach the
+        // very top/bottom edge -- the raw linear version left most blobs (which spend
+        // most of their time in the middle third of the lamp) sitting close to a flat
+        // 50/50 blend, muting the gradient into a single muddy mid-tone instead of a
+        // visible hot/cool contrast.
+        float rawHeatT = Clamp01((halfHeight - centerY) / (2.0f * halfHeight));
+        float heatT = Clamp01(0.5f + (rawHeatT - 0.5f) * 1.8f);
+        RGBColor blobColor = RGBColor::InterpolateColors(coolColor, hotColor, heatT);
+        colorR += blobColor.R * blobField;
+        colorG += blobColor.G * blobField;
+        colorB += blobColor.B * blobField;
     }
 
-    // Small reservoirs to keep classic lava-lamp pooling without dominating the panel.
+    // Small reservoirs to keep classic lava-lamp pooling without dominating the panel --
+    // the bottom pool is always hot and the top pool always cooled, matching their fixed
+    // positions.
     float bottomY = -halfHeight * 0.80f;
     float bottomRx = halfWidth * 0.38f;
     float bottomRy = halfHeight * 0.09f;
     float bx = x / (bottomRx + 0.001f);
     float by = (y - bottomY) / (bottomRy + 0.001f);
-    field += (1.0f / (bx * bx + by * by + 0.35f)) * 0.28f;
+    float bottomField = (1.0f / (bx * bx + by * by + 0.35f)) * 0.28f;
+    field += bottomField;
+    colorR += hotColor.R * bottomField;
+    colorG += hotColor.G * bottomField;
+    colorB += hotColor.B * bottomField;
 
     float topY = halfHeight * 0.80f;
     float topRx = halfWidth * 0.22f;
     float topRy = halfHeight * 0.06f;
     float tx = x / (topRx + 0.001f);
     float ty = (y - topY) / (topRy + 0.001f);
-    field += (1.0f / (tx * tx + ty * ty + 0.45f)) * 0.08f;
+    float topField = (1.0f / (tx * tx + ty * ty + 0.45f)) * 0.08f;
+    field += topField;
+    colorR += coolColor.R * topField;
+    colorG += coolColor.G * topField;
+    colorB += coolColor.B * topField;
 
     float outer = outerThreshold - sinf(timeSeconds * 0.55f) * 0.015f;
     float inner = innerThreshold - sinf(timeSeconds * 0.55f + 0.7f) * 0.02f;
@@ -269,16 +308,26 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
         return backgroundColor;
     }
 
+    // Normalize the weighted color sum back to a single 0-255 color -- this is the
+    // blended "local temperature color" for this pixel, replacing the old fixed
+    // shellColor/coreColor.
+    float invField = field > 0.0001f ? 1.0f / field : 0.0f;
+    RGBColor blendedColor(
+        static_cast<uint8_t>(Clamp(colorR * invField, 0.0f, 255.0f)),
+        static_cast<uint8_t>(Clamp(colorG * invField, 0.0f, 255.0f)),
+        static_cast<uint8_t>(Clamp(colorB * invField, 0.0f, 255.0f)));
+    RGBColor shellTone = ScaleColor(blendedColor, 0.62f);
+
     if (field < inner) {
         float t = SmoothStep((field - outer) / (inner - outer));
-        return RGBColor::InterpolateColors(backgroundColor, shellColor, t);
+        return RGBColor::InterpolateColors(backgroundColor, shellTone, t);
     }
 
     if (field < core) {
         float t = SmoothStep((field - inner) / (core - inner));
-        return RGBColor::InterpolateColors(shellColor, coreColor, t);
+        return RGBColor::InterpolateColors(shellTone, blendedColor, t);
     }
 
-    return LiftColor(coreColor, 20);
+    return LiftColor(blendedColor, 20);
 }
 

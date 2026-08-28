@@ -28,8 +28,12 @@ private:
     float halfHeight = 47.0f;
 
     RGBColor backgroundColor = RGBColor(0, 0, 0);
-    RGBColor shellColor = RGBColor(190, 78, 26);
-    RGBColor coreColor = RGBColor(255, 195, 98);
+    // Color-temperature gradient: each blob's own color is derived from its current
+    // height (hotColor near the bottom heat source, coolColor once it's risen and
+    // cooled), blended per-pixel by field contribution -- see GetRGB(). Both are
+    // re-derived from the active palette color in SetPalette().
+    RGBColor hotColor = RGBColor(255, 195, 98);
+    RGBColor coolColor = RGBColor(190, 78, 26);
 
     float outerThreshold = 1.00f;
     float innerThreshold = 1.44f;
