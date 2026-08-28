@@ -43,5 +43,11 @@ float BouncePhysics::Calculate(float velocity, float dT) {
 
     previousVelocity = velocity;
 
-    return currentPosition + velocity;
+    // currentPosition is already clamped to [0, 1] above -- returning currentPosition +
+    // velocity (the raw, unclamped input) defeated that clamp entirely, letting the
+    // reported "bounce" value reach up to 2.0 for a loud, sustained input. Every caller
+    // (AudioReactiveGradient's circular/bar visualizers, SpectrumAnalyzer's bars) treats
+    // this return value as a 0-1 magnitude, so an unbounded 2x overshoot made them "max
+    // out" at roughly half the input level a properly-bounded value would need.
+    return currentPosition;
 }
