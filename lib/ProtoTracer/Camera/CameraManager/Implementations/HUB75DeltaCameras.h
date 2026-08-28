@@ -13,15 +13,15 @@ private:
     Transform camTransform = Transform(Vector3D(), Vector3D(0, 0, -500.0f), Vector3D(1, 1, 1));
     Transform camSideTransformL = Transform(Vector3D(), Vector3D(204.0f, 0, -500.0f), Vector3D(1, 1, 1));
     Transform camSideTransformR = Transform(Vector3D(0, 0, 0), Vector3D(204.0f, 0, -500.0f), Vector3D(1, 1, 1));
-    // Height matches ProtogenHUB75Project's declared face canvas (Vector2D(192, 94) --
-    // see ProtogenHUB75Project.h) exactly. It used to be declared 96 here vs 94 there, a
-    // mismatch that (combined with PixelGroup::GetCoordinate() sampling cell origins
-    // instead of centers) thinned the top-edge margin to a fraction of a pixel and left
-    // the bottom row sampling exactly on the material boundary with zero margin --
-    // together the two issues caused flicker at the edges of the screen. Now that
-    // GetCoordinate() centers each sample, keeping this in sync with the material canvas
-    // is what gives every edge equal margin instead of clipping the top row outright.
-    PixelGroup<2048> camPixels = PixelGroup<2048>(Vector2D(192.0f, 94.0f), Vector2D(0.0f, 0.0f), 64);
+    // Kept at 96 (NOT the project's 94-tall face canvas) so the Y pitch stays an exact
+    // 96/32 = 3.0 logical units per physical LED, matching X's exact 192/64 = 3.0 --
+    // several materials (DinoGame's kPixelPitch, Snake's dynamically-derived per-cell
+    // pitch) assume every physical LED is spaced exactly 3.0 units apart in both axes.
+    // Declaring this 94 instead (to match the old face-canvas value) would make the two
+    // axes' pitches diverge (3.0 vs 2.9375), causing a small but compounding vertical
+    // drift across bitmap/grid-based materials -- ProtogenHUB75Project's face canvas is
+    // widened to (192, 96) to match this instead (see the edge-flicker fix notes there).
+    PixelGroup<2048> camPixels = PixelGroup<2048>(Vector2D(192.0f, 96.0f), Vector2D(0.0f, 0.0f), 64);
     PixelGroup<88> camSidePixelsL = PixelGroup<88>(DeltaDisplayL);
     PixelGroup<88> camSidePixelsR = PixelGroup<88>(DeltaDisplayR);
     Camera<2048> camMain = Camera<2048>(&camTransform, &cameraLayout, &camPixels);

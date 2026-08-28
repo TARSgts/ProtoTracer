@@ -115,7 +115,7 @@ private:
 #ifdef ENABLE_LAVA_LAMP_FACE
     LavaLampMaterial lavaLamp;
 #endif
-    ConfettiParticles dvdConfetti = ConfettiParticles(Vector2D(192.0f, 94.0f), Vector2D(96.0f, 47.0f));
+    ConfettiParticles dvdConfetti = ConfettiParticles(Vector2D(192.0f, 96.0f), Vector2D(96.0f, 48.0f));
     TexturedQuad bsodQuad; ///< Quad used for the BSOD static image.
     BSOD_3 bsodImage = BSOD_3(Vector2D(), Vector2D()); ///< Static BSOD image material.
     Vector2D dvdOffset = Vector2D(); ///< Logo offset relative to the face center.
@@ -562,7 +562,13 @@ private:
 #endif
 
 public:
-    ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 3, Vector2D(), Vector2D(192.0f, 94.0f), 22, 23, kFaceCount, 21){
+    // Face canvas height widened from 94 to 96 to exactly match the physical pixel grid
+    // (HUB75DeltaCameras.h's camPixels, 64x32 LEDs at an exact 3.0-logical-unit pitch on
+    // both axes) -- see the edge-flicker fix notes there. Declaring 94 here left the
+    // pitch every material assumes (DinoGame's kPixelPitch=3.0f, Snake's dynamically
+    // derived per-cell pitch) mismatched against the true 96/32=3.0 LED spacing, causing
+    // a small but compounding drift in bitmap/grid alignment.
+    ProtogenHUB75Project() : ProtogenProject(&cameras, &controller, 3, Vector2D(), Vector2D(192.0f, 96.0f), 22, 23, kFaceCount, 21){
         scene.AddObject(pM.GetObject());
         scene.AddObject(deltaDisplayBackground.GetObject());
         scene.AddObject(GetDvdObject());
