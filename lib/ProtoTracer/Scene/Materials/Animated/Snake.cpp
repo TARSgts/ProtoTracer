@@ -233,8 +233,21 @@ RGBColor SnakeMaterial::GetRGB(const Vector3D& position, const Vector3D& /*norma
 
     float originX = -gridHalfWidth;
     float originY = -gridHalfHeight;
-    int16_t col = static_cast<int16_t>(floorf((relative.X - originX) / cellWidth));
-    int16_t row = static_cast<int16_t>(floorf((relative.Y - originY) / cellHeight));
+
+    // A small positive nudge before flooring, NOT a plain floor() of the raw division.
+    // On a rectangular grid camera (HUB75), a physical LED's sampled position can land
+    // EXACTLY on a cell boundary (both are derived from the same underlying pixel pitch),
+    // which makes plain floor() maximally fragile: sub-ULP floating-point noise from the
+    // render pipeline (camera transform, barycentric interpolation) can push that value to
+    // just below the exact multiple, flipping floor() to the wrong (lower) cell -- this is
+    // what made the snake/food edges look jagged or randomly sized. The nudge is tiny
+    // relative to a cell (kBoundaryEpsilon << cellWidth/cellHeight) so it can't misclassify
+    // a position that's legitimately near but not at a boundary; on an irregular pixel
+    // layout (WS35), sample positions essentially never land exactly on a cell boundary in
+    // the first place, so the nudge is a no-op there -- this fix is layout-agnostic.
+    constexpr float kBoundaryEpsilon = 0.001f;
+    int16_t col = static_cast<int16_t>(floorf((relative.X - originX) / cellWidth + kBoundaryEpsilon));
+    int16_t row = static_cast<int16_t>(floorf((relative.Y - originY) / cellHeight + kBoundaryEpsilon));
     if (col < 0 || row < 0 || col >= gridWidth || row >= gridHeight) {
         return backgroundColor;
     }
