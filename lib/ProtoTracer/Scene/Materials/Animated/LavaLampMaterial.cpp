@@ -66,7 +66,10 @@ void LavaLampMaterial::RecomputeBounds() {
 void LavaLampMaterial::ResetBlob(uint8_t index) {
     Blob& blob = blobs[index];
 
-    blob.radius = 5.5f + Random01() * 3.7f;
+    // Reported "still really small" on real hardware -- radius was 5.5-9.2 logical
+    // units (~1.8-3.1 physical LED pitches, so barely 4-6 physical pixels across).
+    // Roughly doubled to read as genuinely prominent blobs on a 64-wide panel.
+    blob.radius = 10.0f + Random01() * 8.0f;
     blob.vx = (Random01() - 0.5f) * 1.5f;
     blob.vy = 3.0f + Random01() * 3.8f;
     blob.phase = Random01() * 2.0f * kPi;

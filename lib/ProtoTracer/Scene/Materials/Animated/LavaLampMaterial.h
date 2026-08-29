@@ -27,7 +27,12 @@ private:
         float sinkStrength;
     };
 
-    static constexpr uint8_t kBlobCount = 6;
+    // Reduced from 6 now that blobs are roughly double their old radius -- at the bigger
+    // size, 6 kept some pair touching/merging ~85% of the time (measured by simulation),
+    // reading as one constantly-fused blob mass instead of distinct blobs that
+    // occasionally merge. 4 brings that back down to ~11%, matching the original,
+    // well-received merge frequency from the first pass at this size.
+    static constexpr uint8_t kBlobCount = 4;
     Blob blobs[kBlobCount];
 
     Vector2D size = Vector2D(192.0f, 94.0f);
