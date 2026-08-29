@@ -14,29 +14,35 @@ private:
         float vy;
         float radius;
         float phase;
+        float phase2;
         float pulseRate;
-        float driftRate;
+        // Two slow, incommensurate frequencies summed together give smooth-but-
+        // unpredictable long-term horizontal wander (see Update()) without the
+        // frame-to-frame jitter a per-frame random walk would produce.
+        float wanderFreqA;
+        float wanderFreqB;
         float anchorX;
         // Bistable thermal cycle: true while heating/rising, false while cooling/sinking.
-        // Flips at the top/bottom of its travel range in Update() -- this replaces a
+        // Flips well before the physical wall (see Update()) -- this replaces a
         // force-balance model that had a wide dead zone around vertical center where
         // buoyancy was ~0, which made blobs stall and hover mid-screen instead of
         // completing a full rise-and-fall cycle like a real lava lamp.
         bool rising;
-        float riseStrength;
-        float sinkStrength;
+        // Target speeds (not forces) that vy eases toward -- see Update(). Deliberately
+        // slow: a real lava lamp takes many seconds to rise or fall, it doesn't dart.
+        float riseSpeed;
+        float sinkSpeed;
         // Long-term wander target: anchorX is re-rolled to a fresh random position
-        // (see Update()) whenever timeSeconds passes this, instead of staying fixed at
-        // one "home lane" forever -- gives the lamp genuine unpredictability over time,
-        // not just short-term jitter around a fixed point.
+        // across the FULL width (see Update()) whenever timeSeconds passes this, instead
+        // of staying fixed at one "home lane" forever.
         float nextAnchorChangeTime;
     };
 
-    // Reduced from 6 now that blobs are roughly double their old radius -- at the bigger
-    // size, 6 kept some pair touching/merging ~85% of the time (measured by simulation),
-    // reading as one constantly-fused blob mass instead of distinct blobs that
-    // occasionally merge. 4 brings that back down to ~11%, matching the original,
-    // well-received merge frequency from the first pass at this size.
+    // Kept small and large-bodied on purpose: a real lava lamp shows a handful of big,
+    // distinct blobs, not a crowd of small ones. Re-verified by simulation after every
+    // size/count change in this file's history (see memory notes) that merge frequency
+    // stays in a "distinct blobs that occasionally fuse" range rather than either
+    // "never touch" or "permanently fused into one mass."
     static constexpr uint8_t kBlobCount = 4;
     Blob blobs[kBlobCount];
 
@@ -69,7 +75,7 @@ private:
 
     void RecomputeBounds();
     void ResetBlob(uint8_t index);
-    void ResolveBlobSeparation(float dt);
+    void ResolveBlobSeparation();
 
 public:
     LavaLampMaterial(Vector2D dimensions = Vector2D(192.0f, 94.0f), Vector2D center = Vector2D(96.0f, 47.0f));
@@ -81,4 +87,3 @@ public:
 
     RGBColor GetRGB(const Vector3D& position, const Vector3D& normal, const Vector3D& uvw) override;
 };
-

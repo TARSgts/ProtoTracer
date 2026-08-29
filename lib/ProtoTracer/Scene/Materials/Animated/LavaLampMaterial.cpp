@@ -66,39 +66,31 @@ void LavaLampMaterial::RecomputeBounds() {
 void LavaLampMaterial::ResetBlob(uint8_t index) {
     Blob& blob = blobs[index];
 
-    // Reported "still really small" on real hardware -- radius was 5.5-9.2 logical
-    // units (~1.8-3.1 physical LED pitches, so barely 4-6 physical pixels across).
-    // Roughly doubled to read as genuinely prominent blobs on a 64-wide panel.
     blob.radius = 10.0f + Random01() * 8.0f;
-    blob.vx = (Random01() - 0.5f) * 1.5f;
-    blob.vy = 3.0f + Random01() * 3.8f;
+    blob.vx = 0.0f;
+    blob.vy = 0.0f;
     blob.phase = Random01() * 2.0f * kPi;
-    blob.pulseRate = 0.20f + Random01() * 0.34f;
-    blob.driftRate = 0.24f + Random01() * 0.44f;
+    blob.phase2 = Random01() * 2.0f * kPi;
+    blob.pulseRate = 0.10f + Random01() * 0.08f;
+    blob.wanderFreqA = 0.05f + Random01() * 0.03f;
+    blob.wanderFreqB = 0.11f + Random01() * 0.05f;
     blob.rising = Random01() < 0.5f;
-    // Per-blob pace so they don't all rise/sink in lockstep -- some noticeably quicker,
-    // some more languid, for a livelier, less mechanical-looking lamp.
-    blob.riseStrength = 9.0f + Random01() * 6.0f;
-    blob.sinkStrength = 7.0f + Random01() * 5.0f;
-    blob.nextAnchorChangeTime = timeSeconds + 3.0f + Random01() * 6.0f;
+    // Full one-way trip covers roughly 2*halfHeight*0.7 or so at this speed -- taking
+    // ~15-30s, not a handful of seconds. A real lava lamp is slow and hypnotic.
+    blob.riseSpeed = 3.2f + Random01() * 1.8f;
+    blob.sinkSpeed = 2.6f + Random01() * 1.6f;
+    blob.nextAnchorChangeTime = timeSeconds + 8.0f + Random01() * 10.0f;
 
-    // Keep each blob distributed across the panel to avoid center clustering.
     float laneWidth = (halfWidth * 2.0f) / static_cast<float>(kBlobCount);
     float laneCenter = -halfWidth + laneWidth * (static_cast<float>(index) + 0.5f);
-    blob.anchorX = laneCenter + (Random01() - 0.5f) * laneWidth * 0.25f;
-
-    float spanX = halfWidth - blob.radius - 1.0f;
+    float spanX = halfWidth - blob.radius - 4.0f;
     if (spanX < 2.0f) spanX = 2.0f;
-    blob.anchorX = Clamp(blob.anchorX, -spanX, spanX);
-    blob.x = blob.anchorX + (Random01() - 0.5f) * laneWidth * 0.35f;
-    blob.x = Clamp(blob.x, -spanX, spanX);
+    blob.anchorX = Clamp(laneCenter, -spanX, spanX);
+    blob.x = blob.anchorX;
 
-    float spanY = halfHeight - blob.radius - 1.0f;
+    float spanY = halfHeight - blob.radius - 4.0f;
     if (spanY < 2.0f) spanY = 2.0f;
     blob.y = (Random01() - 0.5f) * spanY * 2.0f;
-    if (Random01() < 0.4f) {
-        blob.vy = -blob.vy;
-    }
 }
 
 void LavaLampMaterial::SetSize(Vector2D dimensions) {
@@ -126,7 +118,7 @@ void LavaLampMaterial::SetPalette(const RGBColor& baseColor) {
     coolColor = LiftColor(ScaleColor(base, 0.30f), 6).HueShift(-60.0f);
 }
 
-void LavaLampMaterial::ResolveBlobSeparation(float dt) {
+void LavaLampMaterial::ResolveBlobSeparation() {
     for (uint8_t i = 0; i < kBlobCount; ++i) {
         for (uint8_t j = i + 1; j < kBlobCount; ++j) {
             Blob& a = blobs[i];
@@ -136,7 +128,11 @@ void LavaLampMaterial::ResolveBlobSeparation(float dt) {
             float dy = b.y - a.y;
             float distSq = dx * dx + dy * dy + 0.0001f;
             float dist = sqrtf(distSq);
-            float minDist = (a.radius + b.radius) * 1.08f;
+            // 1.15x (not the classic ~1.0x "solid body" separation) so blobs can overlap
+            // enough for their fields to visibly bridge/merge before being pushed apart --
+            // this is what makes merging read as fluid coalescence instead of two solid
+            // balls bumping into each other.
+            float minDist = (a.radius + b.radius) * 1.15f;
 
             if (dist < minDist) {
                 float push = (minDist - dist) * 0.5f;
@@ -147,12 +143,6 @@ void LavaLampMaterial::ResolveBlobSeparation(float dt) {
                 a.y -= ny * push;
                 b.x += nx * push;
                 b.y += ny * push;
-
-                float vPush = 0.22f;
-                a.vx -= nx * vPush * dt;
-                a.vy -= ny * vPush * dt;
-                b.vx += nx * vPush * dt;
-                b.vy += ny * vPush * dt;
             }
         }
     }
@@ -173,95 +163,73 @@ void LavaLampMaterial::Update() {
     for (uint8_t i = 0; i < kBlobCount; ++i) {
         Blob& blob = blobs[i];
 
-        // Bistable thermal cycle instead of a continuous force balance: a blob is either
-        // decisively heating and rising, or decisively cooling and sinking, and flips
-        // state on reaching the top/bottom of its travel range. This guarantees a full,
-        // lively rise-and-fall every cycle -- the old buoyancy formula had a wide dead
-        // zone around vertical center (both its heat and cool terms were exactly 0 there)
-        // where a blob could stall and just hover mid-screen instead of completing a trip.
-        float topFlip = halfHeight * 0.80f;
-        float bottomFlip = -halfHeight * 0.80f;
+        // Both thresholds are derived from THIS blob's own radius, with the flip
+        // trigger comfortably inside the hard wall (7 units of margin vs. the wall's 4)
+        // -- guarantees the flip always fires before the wall, regardless of radius.
+        // A fixed fraction of halfHeight is NOT safe here: for this lamp's blob radii
+        // (10-18), a fraction-based threshold can sit BEYOND where a large blob can
+        // even physically reach, so "rising" would never flip and the blob would drive
+        // straight into the wall and stay there forever (caught by simulation before
+        // this shipped: some seeds showed a blob frozen at a wall for 15-26+ seconds).
+        float topFlip = halfHeight - blob.radius - 7.0f;
+        float bottomFlip = -halfHeight + blob.radius + 7.0f;
         if (blob.rising && blob.y > topFlip) {
             blob.rising = false;
         } else if (!blob.rising && blob.y < bottomFlip) {
             blob.rising = true;
         }
 
-        float thermalWave = sinf(timeSeconds * (0.55f + blob.pulseRate) + blob.phase) * 0.9f;
-        float buoyancy = (blob.rising ? blob.riseStrength : -blob.sinkStrength) + thermalWave;
-        float sizeDrag = (blob.radius - 7.0f) * 0.10f;
+        // Ease vy toward a target speed (a simple low-pass filter) instead of the old
+        // force+damping model -- much easier to keep BOTH slow and smooth, with no risk
+        // of oscillation or overshoot around the target.
+        float targetVy = blob.rising ? blob.riseSpeed : -blob.sinkSpeed;
+        const float kVerticalEaseRate = 0.6f; // per second; lower = more languid
+        blob.vy += (targetVy - blob.vy) * kVerticalEaseRate * dt;
 
-        blob.vy += (buoyancy - sizeDrag) * dt;
-        blob.vy *= (1.0f - 0.045f * dt);
-        blob.vy = Clamp(blob.vy, -10.5f, 10.5f);
-
-        // Long-term wander: periodically re-roll the target lane itself (across the
-        // FULL width, not just this blob's original 1/kBlobCount slice) instead of
-        // homing toward one fixed spot forever -- this is what actually makes the lamp
-        // feel unpredictable over time, on top of the short-term jitter below.
         if (timeSeconds >= blob.nextAnchorChangeTime) {
             float spanX = halfWidth - blob.radius - 4.0f;
             if (spanX < 2.0f) spanX = 2.0f;
             blob.anchorX = Clamp((Random01() - 0.5f) * 2.0f * halfWidth, -spanX, spanX);
-            blob.nextAnchorChangeTime = timeSeconds + 3.0f + Random01() * 6.0f;
+            blob.nextAnchorChangeTime = timeSeconds + 8.0f + Random01() * 10.0f;
         }
 
-        // A weak homing bias toward the current anchor (was 0.9, a tight leash) --
-        // strong enough to still avoid all blobs drifting into a single center clump,
-        // but loose enough to let blobs actually wander into a neighbor's territory and
-        // pass close enough to merge, which the original value made all but impossible
-        // (verified by simulation: 0% of run time had any two blobs within visual-merge
-        // distance at 0.9, vs ~9% at 0.12, with no meaningful difference in overall
-        // horizontal spread between the two).
-        float springToLane = (blob.anchorX - blob.x) * 0.12f;
-        float sideDrift = sinf(timeSeconds * blob.driftRate + blob.phase) * 0.65f;
-        // Continuous random-walk turbulence on both axes -- real convection is chaotic,
-        // not a clean sine wave, and the purely-periodic drift above (however large its
-        // amplitude) still reads as mechanical/predictable over time. This is deliberately
-        // small per-frame (scaled by dt like everything else here) so it accumulates into
-        // organic, non-repeating wander rather than visible per-frame twitching.
-        float turbulenceX = (Random01() - 0.5f) * 3.0f;
-        float turbulenceY = (Random01() - 0.5f) * 2.0f;
-        blob.vx += (springToLane + sideDrift + turbulenceX) * dt;
-        blob.vx *= (1.0f - 0.045f * dt);
-        blob.vx = Clamp(blob.vx, -3.4f, 3.4f);
-        blob.vy += turbulenceY * dt;
+        // Smooth pseudo-noise (two slow sines at incommensurate frequencies) instead of
+        // a per-frame random walk -- real fluid motion drifts smoothly; a per-frame
+        // random kick reads as jittery/glitchy rather than alive, no matter how small.
+        float noiseX = sinf(timeSeconds * blob.wanderFreqA + blob.phase) * 0.6f
+                     + sinf(timeSeconds * blob.wanderFreqB + blob.phase2) * 0.4f;
+        float targetVx = (blob.anchorX - blob.x) * 0.05f + noiseX * 0.8f;
+        blob.vx += (targetVx - blob.vx) * 4.0f * dt;
 
         blob.x += blob.vx * dt;
         blob.y += blob.vy * dt;
 
-        // Margin widened from 1.0 to comfortably cover both the cosmetic render-side
-        // jitter (+/-1.7 max) and the render radius's own pulse/heat-inflation overshoot
-        // above this base radius (up to ~17%) -- see the GetRGB comment on why that
-        // render-side clamp was removed instead of kept in sync with this one.
         float left = -halfWidth + blob.radius + 4.0f;
         float right = halfWidth - blob.radius - 4.0f;
         float bottom = -halfHeight + blob.radius + 4.0f;
         float top = halfHeight - blob.radius - 4.0f;
 
+        // Position-only clamp -- deliberately does NOT touch velocity. Zeroing vy/vx on
+        // wall contact (an earlier version of this rework did) could permanently freeze
+        // a blob: ResolveBlobSeparation() below runs afterward and can shove an
+        // overlapping blob back past a wall on every single frame, so the NEXT frame's
+        // clamp would re-fire and wipe the velocity again before it ever built up enough
+        // to escape. Confirmed by simulation before this shipped (some seeds showed a
+        // multi-second freeze); leaving velocity alone means it keeps easing toward its
+        // rise/sink target regardless of position hiccups from nearby blobs.
         if (blob.x > right) {
-            float overshoot = blob.x - right;
-            blob.x = right - overshoot;
-            blob.vx = -fabsf(blob.vx) * 0.95f;
+            blob.x = right;
         } else if (blob.x < left) {
-            float overshoot = left - blob.x;
-            blob.x = left + overshoot;
-            blob.vx = fabsf(blob.vx) * 0.95f;
+            blob.x = left;
         }
-
         if (blob.y > top) {
-            float overshoot = blob.y - top;
-            blob.y = top - overshoot;
-            blob.vy = -fabsf(blob.vy) * 0.96f;
+            blob.y = top;
         } else if (blob.y < bottom) {
-            float overshoot = bottom - blob.y;
-            blob.y = bottom + overshoot;
-            blob.vy = fabsf(blob.vy) * 0.96f;
+            blob.y = bottom;
         }
-
     }
 
-    ResolveBlobSeparation(dt);
+    ResolveBlobSeparation();
 }
 
 RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, const Vector3D&) {
@@ -282,55 +250,49 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
     for (uint8_t i = 0; i < kBlobCount; ++i) {
         const Blob& blob = blobs[i];
 
-        float pulse = 0.94f + 0.12f * sinf(timeSeconds * blob.pulseRate + blob.phase);
-        float heatInflation = 1.0f + 0.10f * Clamp01((-blob.y) / (halfHeight + 0.001f));
-        float radius = blob.radius * pulse * heatInflation;
+        // Gentle radius "breathing" -- slow and subtle, not tied to wall proximity
+        // (the old heatInflation term compounded with the wall clamp in confusing ways
+        // across this file's history; a plain, slow, always-on pulse is simpler and
+        // avoids that whole class of bug).
+        float pulse = 0.97f + 0.05f * sinf(timeSeconds * blob.pulseRate + blob.phase);
+        float radius = blob.radius * pulse;
 
-        // NOT re-clamped to the walls here (that was the cause of the reported "snap size"
-        // at the edges): this clamp used to re-derive its bound from `radius`, which
-        // pulses +/-12% and inflates further near the bottom -- a DIFFERENT, frame-varying
-        // value from the stable base `blob.radius` that Update()'s own wall-bounce physics
-        // already uses to keep blob.x/blob.y a safe distance from the wall. With two
-        // clamps using two different, disagreeing margins, a blob resting against a wall
-        // would have its rendered edge hard-clamped to a bound that shifted every frame as
-        // the pulse phase changed, popping visibly instead of smoothly touching the edge.
-        // Update()'s margin (below) is generous enough that this small cosmetic jitter
-        // can't push the render meaningfully past the true canvas edge anyway.
-        float centerX = blob.x + sinf(timeSeconds * blob.driftRate + blob.phase) * 1.7f;
-        float centerY = blob.y + sinf(timeSeconds * (blob.driftRate * 0.48f) + blob.phase * 1.3f) * 0.7f;
+        float dx = x - blob.x;
+        float dy = y - blob.y;
 
-        float dx = x - centerX;
-        float dy = y - centerY;
+        // Teardrop asymmetry: the edge trailing behind the direction of travel
+        // stretches into a tail; the leading edge stays blunt/rounded. This is what
+        // actually reads as "molten blob" rather than a squashed ellipse -- real
+        // rising/falling wax drips and blobs are asymmetric, not symmetric ovals.
+        float speedFactor = Clamp(fabsf(blob.vy) * 0.13f, 0.0f, 0.6f);
+        bool movingUp = blob.vy >= 0.0f;
+        // dy>0 means the sample point is above the blob's center. If rising, "above" is
+        // the leading (blunt) edge and "below" is the trailing tail; if sinking, it's
+        // the other way around.
+        float stretchAbove = movingUp ? (1.0f + speedFactor * 0.4f) : (1.0f - speedFactor);
+        float stretchBelow = movingUp ? (1.0f - speedFactor) : (1.0f + speedFactor * 0.4f);
+        float stretch = (dy >= 0.0f) ? stretchAbove : stretchBelow;
 
-        // Squash/stretch scales with current speed, not just direction, so a blob
-        // moving fast reads as visibly elongated (classic animation liveliness) while a
-        // near-stationary one (e.g. right at a rise/sink flip) looks closer to round.
-        float speedFactor = Clamp(fabsf(blob.vy) * 0.030f, 0.0f, 0.28f);
-        float stretch = (blob.vy >= 0.0f) ? (1.0f - speedFactor) : (1.0f + speedFactor);
-
-        // Low-frequency angular wobble on top of the isotropic falloff -- deforms the
-        // silhouette into an organic, non-circular "amoeba" outline that slowly churns
-        // over time, instead of every blob rendering as a plain soft-edged circle.
-        // Kept to 2-3 lobes and modest amplitude: at this display's physical pixel pitch,
-        // anything higher-frequency or stronger reads as noise rather than a blobby shape.
+        // Low-frequency angular wobble on top of the isotropic falloff -- a subtle,
+        // slow-churning organic texture. Kept modest: at this display's physical pixel
+        // pitch, anything higher-frequency or stronger reads as noise, not a blobby
+        // shape.
         float angle = atan2f(dy * stretch, dx);
-        float wobble = 1.0f
-            + 0.16f * sinf(angle * 2.0f + blob.phase + timeSeconds * 0.5f)
-            + 0.10f * sinf(angle * 3.0f - blob.phase * 1.6f + timeSeconds * 0.7f);
+        float wobble = 1.0f + 0.10f * sinf(angle * 2.0f + blob.phase + timeSeconds * 0.25f);
         float distSq = (dx * dx + (dy * stretch) * (dy * stretch)) / (wobble * wobble) + radius * 0.85f;
         float blobField = (radius * radius) / distSq;
         field += blobField;
 
         // Color temperature: a blob's color is derived from where it currently is, not
         // fixed -- hot (bright) near the bottom heat source, cooling toward the dark/
-        // hue-shifted end as it rises. Recomputed from centerY every frame so a blob's
+        // hue-shifted end as it rises. Recomputed from blob.y every frame so a blob's
         // color genuinely shifts as it rises and falls, matching real lava lamp wax.
         // Contrast-boosted so blobs read as clearly hot/cool well before they reach the
         // very top/bottom edge -- the raw linear version left most blobs (which spend
         // most of their time in the middle third of the lamp) sitting close to a flat
         // 50/50 blend, muting the gradient into a single muddy mid-tone instead of a
         // visible hot/cool contrast.
-        float rawHeatT = Clamp01((halfHeight - centerY) / (2.0f * halfHeight));
+        float rawHeatT = Clamp01((halfHeight - blob.y) / (2.0f * halfHeight));
         float heatT = Clamp01(0.5f + (rawHeatT - 0.5f) * 1.8f);
         RGBColor blobColor = RGBColor::InterpolateColors(coolColor, hotColor, heatT);
         colorR += blobColor.R * blobField;
@@ -341,39 +303,34 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
     // Small reservoirs to keep classic lava-lamp pooling without dominating the panel --
     // the bottom pool is always hot and the top pool always cooled, matching their fixed
     // positions.
-    float bottomY = -halfHeight * 0.80f;
-    float bottomRx = halfWidth * 0.38f;
-    float bottomRy = halfHeight * 0.09f;
+    float bottomY = -halfHeight * 0.82f;
+    float bottomRx = halfWidth * 0.42f;
+    float bottomRy = halfHeight * 0.10f;
     float bx = x / (bottomRx + 0.001f);
     float by = (y - bottomY) / (bottomRy + 0.001f);
-    float bottomField = (1.0f / (bx * bx + by * by + 0.35f)) * 0.28f;
+    float bottomField = (1.0f / (bx * bx + by * by + 0.35f)) * 0.30f;
     field += bottomField;
     colorR += hotColor.R * bottomField;
     colorG += hotColor.G * bottomField;
     colorB += hotColor.B * bottomField;
 
-    float topY = halfHeight * 0.80f;
-    float topRx = halfWidth * 0.22f;
-    float topRy = halfHeight * 0.06f;
+    float topY = halfHeight * 0.82f;
+    float topRx = halfWidth * 0.24f;
+    float topRy = halfHeight * 0.07f;
     float tx = x / (topRx + 0.001f);
     float ty = (y - topY) / (topRy + 0.001f);
-    float topField = (1.0f / (tx * tx + ty * ty + 0.45f)) * 0.08f;
+    float topField = (1.0f / (tx * tx + ty * ty + 0.45f)) * 0.09f;
     field += topField;
     colorR += coolColor.R * topField;
     colorG += coolColor.G * topField;
     colorB += coolColor.B * topField;
 
-    float outer = outerThreshold - sinf(timeSeconds * 0.55f) * 0.015f;
-    float inner = innerThreshold - sinf(timeSeconds * 0.55f + 0.7f) * 0.02f;
-    float core = coreThreshold - sinf(timeSeconds * 0.55f + 1.2f) * 0.025f;
-
-    if (field < outer) {
+    if (field < outerThreshold) {
         return backgroundColor;
     }
 
     // Normalize the weighted color sum back to a single 0-255 color -- this is the
-    // blended "local temperature color" for this pixel, replacing the old fixed
-    // shellColor/coreColor.
+    // blended "local temperature color" for this pixel.
     float invField = field > 0.0001f ? 1.0f / field : 0.0f;
     RGBColor blendedColor(
         static_cast<uint8_t>(Clamp(colorR * invField, 0.0f, 255.0f)),
@@ -381,16 +338,15 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
         static_cast<uint8_t>(Clamp(colorB * invField, 0.0f, 255.0f)));
     RGBColor shellTone = ScaleColor(blendedColor, 0.62f);
 
-    if (field < inner) {
-        float t = SmoothStep((field - outer) / (inner - outer));
+    if (field < innerThreshold) {
+        float t = SmoothStep((field - outerThreshold) / (innerThreshold - outerThreshold));
         return RGBColor::InterpolateColors(backgroundColor, shellTone, t);
     }
 
-    if (field < core) {
-        float t = SmoothStep((field - inner) / (core - inner));
+    if (field < coreThreshold) {
+        float t = SmoothStep((field - innerThreshold) / (coreThreshold - innerThreshold));
         return RGBColor::InterpolateColors(shellTone, blendedColor, t);
     }
 
     return LiftColor(blendedColor, 20);
 }
-
