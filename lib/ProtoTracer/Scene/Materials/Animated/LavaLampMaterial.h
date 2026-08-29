@@ -25,6 +25,11 @@ private:
         bool rising;
         float riseStrength;
         float sinkStrength;
+        // Long-term wander target: anchorX is re-rolled to a fresh random position
+        // (see Update()) whenever timeSeconds passes this, instead of staying fixed at
+        // one "home lane" forever -- gives the lamp genuine unpredictability over time,
+        // not just short-term jitter around a fixed point.
+        float nextAnchorChangeTime;
     };
 
     // Reduced from 6 now that blobs are roughly double their old radius -- at the bigger

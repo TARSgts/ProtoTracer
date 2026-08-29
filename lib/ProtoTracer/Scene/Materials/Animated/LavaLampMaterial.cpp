@@ -80,6 +80,7 @@ void LavaLampMaterial::ResetBlob(uint8_t index) {
     // some more languid, for a livelier, less mechanical-looking lamp.
     blob.riseStrength = 9.0f + Random01() * 6.0f;
     blob.sinkStrength = 7.0f + Random01() * 5.0f;
+    blob.nextAnchorChangeTime = timeSeconds + 3.0f + Random01() * 6.0f;
 
     // Keep each blob distributed across the panel to avoid center clustering.
     float laneWidth = (halfWidth * 2.0f) / static_cast<float>(kBlobCount);
@@ -194,7 +195,18 @@ void LavaLampMaterial::Update() {
         blob.vy *= (1.0f - 0.045f * dt);
         blob.vy = Clamp(blob.vy, -10.5f, 10.5f);
 
-        // A weak homing bias toward each blob's own lane (was 0.9, a tight leash) --
+        // Long-term wander: periodically re-roll the target lane itself (across the
+        // FULL width, not just this blob's original 1/kBlobCount slice) instead of
+        // homing toward one fixed spot forever -- this is what actually makes the lamp
+        // feel unpredictable over time, on top of the short-term jitter below.
+        if (timeSeconds >= blob.nextAnchorChangeTime) {
+            float spanX = halfWidth - blob.radius - 4.0f;
+            if (spanX < 2.0f) spanX = 2.0f;
+            blob.anchorX = Clamp((Random01() - 0.5f) * 2.0f * halfWidth, -spanX, spanX);
+            blob.nextAnchorChangeTime = timeSeconds + 3.0f + Random01() * 6.0f;
+        }
+
+        // A weak homing bias toward the current anchor (was 0.9, a tight leash) --
         // strong enough to still avoid all blobs drifting into a single center clump,
         // but loose enough to let blobs actually wander into a neighbor's territory and
         // pass close enough to merge, which the original value made all but impossible
@@ -203,17 +215,29 @@ void LavaLampMaterial::Update() {
         // horizontal spread between the two).
         float springToLane = (blob.anchorX - blob.x) * 0.12f;
         float sideDrift = sinf(timeSeconds * blob.driftRate + blob.phase) * 0.65f;
-        blob.vx += (springToLane + sideDrift) * dt;
+        // Continuous random-walk turbulence on both axes -- real convection is chaotic,
+        // not a clean sine wave, and the purely-periodic drift above (however large its
+        // amplitude) still reads as mechanical/predictable over time. This is deliberately
+        // small per-frame (scaled by dt like everything else here) so it accumulates into
+        // organic, non-repeating wander rather than visible per-frame twitching.
+        float turbulenceX = (Random01() - 0.5f) * 3.0f;
+        float turbulenceY = (Random01() - 0.5f) * 2.0f;
+        blob.vx += (springToLane + sideDrift + turbulenceX) * dt;
         blob.vx *= (1.0f - 0.045f * dt);
-        blob.vx = Clamp(blob.vx, -3.0f, 3.0f);
+        blob.vx = Clamp(blob.vx, -3.4f, 3.4f);
+        blob.vy += turbulenceY * dt;
 
         blob.x += blob.vx * dt;
         blob.y += blob.vy * dt;
 
-        float left = -halfWidth + blob.radius + 1.0f;
-        float right = halfWidth - blob.radius - 1.0f;
-        float bottom = -halfHeight + blob.radius + 1.0f;
-        float top = halfHeight - blob.radius - 1.0f;
+        // Margin widened from 1.0 to comfortably cover both the cosmetic render-side
+        // jitter (+/-1.7 max) and the render radius's own pulse/heat-inflation overshoot
+        // above this base radius (up to ~17%) -- see the GetRGB comment on why that
+        // render-side clamp was removed instead of kept in sync with this one.
+        float left = -halfWidth + blob.radius + 4.0f;
+        float right = halfWidth - blob.radius - 4.0f;
+        float bottom = -halfHeight + blob.radius + 4.0f;
+        float top = halfHeight - blob.radius - 4.0f;
 
         if (blob.x > right) {
             float overshoot = blob.x - right;
@@ -262,10 +286,18 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
         float heatInflation = 1.0f + 0.10f * Clamp01((-blob.y) / (halfHeight + 0.001f));
         float radius = blob.radius * pulse * heatInflation;
 
+        // NOT re-clamped to the walls here (that was the cause of the reported "snap size"
+        // at the edges): this clamp used to re-derive its bound from `radius`, which
+        // pulses +/-12% and inflates further near the bottom -- a DIFFERENT, frame-varying
+        // value from the stable base `blob.radius` that Update()'s own wall-bounce physics
+        // already uses to keep blob.x/blob.y a safe distance from the wall. With two
+        // clamps using two different, disagreeing margins, a blob resting against a wall
+        // would have its rendered edge hard-clamped to a bound that shifted every frame as
+        // the pulse phase changed, popping visibly instead of smoothly touching the edge.
+        // Update()'s margin (below) is generous enough that this small cosmetic jitter
+        // can't push the render meaningfully past the true canvas edge anyway.
         float centerX = blob.x + sinf(timeSeconds * blob.driftRate + blob.phase) * 1.7f;
         float centerY = blob.y + sinf(timeSeconds * (blob.driftRate * 0.48f) + blob.phase * 1.3f) * 0.7f;
-        centerX = Clamp(centerX, -halfWidth + radius + 1.0f, halfWidth - radius - 1.0f);
-        centerY = Clamp(centerY, -halfHeight + radius + 1.0f, halfHeight - radius - 1.0f);
 
         float dx = x - centerX;
         float dy = y - centerY;
