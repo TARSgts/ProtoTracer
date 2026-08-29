@@ -17,6 +17,14 @@ private:
         float pulseRate;
         float driftRate;
         float anchorX;
+        // Bistable thermal cycle: true while heating/rising, false while cooling/sinking.
+        // Flips at the top/bottom of its travel range in Update() -- this replaces a
+        // force-balance model that had a wide dead zone around vertical center where
+        // buoyancy was ~0, which made blobs stall and hover mid-screen instead of
+        // completing a full rise-and-fall cycle like a real lava lamp.
+        bool rising;
+        float riseStrength;
+        float sinkStrength;
     };
 
     static constexpr uint8_t kBlobCount = 6;

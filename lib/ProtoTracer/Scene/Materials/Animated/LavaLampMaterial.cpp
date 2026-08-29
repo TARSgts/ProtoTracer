@@ -72,6 +72,11 @@ void LavaLampMaterial::ResetBlob(uint8_t index) {
     blob.phase = Random01() * 2.0f * kPi;
     blob.pulseRate = 0.20f + Random01() * 0.34f;
     blob.driftRate = 0.24f + Random01() * 0.44f;
+    blob.rising = Random01() < 0.5f;
+    // Per-blob pace so they don't all rise/sink in lockstep -- some noticeably quicker,
+    // some more languid, for a livelier, less mechanical-looking lamp.
+    blob.riseStrength = 9.0f + Random01() * 6.0f;
+    blob.sinkStrength = 7.0f + Random01() * 5.0f;
 
     // Keep each blob distributed across the panel to avoid center clustering.
     float laneWidth = (halfWidth * 2.0f) / static_cast<float>(kBlobCount);
@@ -164,16 +169,27 @@ void LavaLampMaterial::Update() {
     for (uint8_t i = 0; i < kBlobCount; ++i) {
         Blob& blob = blobs[i];
 
-        float yNorm = blob.y / (halfHeight + 0.001f);
-        float bottomHeat = Clamp01((-yNorm - 0.10f) / 0.90f);
-        float topCool = Clamp01((yNorm - 0.15f) / 0.85f);
-        float thermalWave = sinf(timeSeconds * (0.55f + blob.pulseRate) + blob.phase) * 0.32f;
-        float buoyancy = 7.0f * bottomHeat - 6.4f * topCool + thermalWave;
+        // Bistable thermal cycle instead of a continuous force balance: a blob is either
+        // decisively heating and rising, or decisively cooling and sinking, and flips
+        // state on reaching the top/bottom of its travel range. This guarantees a full,
+        // lively rise-and-fall every cycle -- the old buoyancy formula had a wide dead
+        // zone around vertical center (both its heat and cool terms were exactly 0 there)
+        // where a blob could stall and just hover mid-screen instead of completing a trip.
+        float topFlip = halfHeight * 0.80f;
+        float bottomFlip = -halfHeight * 0.80f;
+        if (blob.rising && blob.y > topFlip) {
+            blob.rising = false;
+        } else if (!blob.rising && blob.y < bottomFlip) {
+            blob.rising = true;
+        }
+
+        float thermalWave = sinf(timeSeconds * (0.55f + blob.pulseRate) + blob.phase) * 0.9f;
+        float buoyancy = (blob.rising ? blob.riseStrength : -blob.sinkStrength) + thermalWave;
         float sizeDrag = (blob.radius - 7.0f) * 0.10f;
 
         blob.vy += (buoyancy - sizeDrag) * dt;
-        blob.vy *= (1.0f - 0.07f * dt);
-        blob.vy = Clamp(blob.vy, -6.8f, 6.8f);
+        blob.vy *= (1.0f - 0.045f * dt);
+        blob.vy = Clamp(blob.vy, -10.5f, 10.5f);
 
         // A weak homing bias toward each blob's own lane (was 0.9, a tight leash) --
         // strong enough to still avoid all blobs drifting into a single center clump,
@@ -183,10 +199,10 @@ void LavaLampMaterial::Update() {
         // distance at 0.9, vs ~9% at 0.12, with no meaningful difference in overall
         // horizontal spread between the two).
         float springToLane = (blob.anchorX - blob.x) * 0.12f;
-        float sideDrift = sinf(timeSeconds * blob.driftRate + blob.phase) * 0.42f;
+        float sideDrift = sinf(timeSeconds * blob.driftRate + blob.phase) * 0.65f;
         blob.vx += (springToLane + sideDrift) * dt;
-        blob.vx *= (1.0f - 0.06f * dt);
-        blob.vx = Clamp(blob.vx, -2.2f, 2.2f);
+        blob.vx *= (1.0f - 0.045f * dt);
+        blob.vx = Clamp(blob.vx, -3.0f, 3.0f);
 
         blob.x += blob.vx * dt;
         blob.y += blob.vy * dt;
@@ -216,9 +232,6 @@ void LavaLampMaterial::Update() {
             blob.vy = fabsf(blob.vy) * 0.96f;
         }
 
-        if (fabsf(blob.vy) < 0.9f && (blob.y > top * 0.90f || blob.y < bottom * 0.90f)) {
-            blob.vy += (blob.y >= 0.0f) ? -0.5f : 0.5f;
-        }
     }
 
     ResolveBlobSeparation(dt);
@@ -253,8 +266,23 @@ RGBColor LavaLampMaterial::GetRGB(const Vector3D& position, const Vector3D&, con
 
         float dx = x - centerX;
         float dy = y - centerY;
-        float stretch = (blob.vy >= 0.0f) ? 0.82f : 1.08f;
-        float distSq = dx * dx + (dy * stretch) * (dy * stretch) + radius * 0.85f;
+
+        // Squash/stretch scales with current speed, not just direction, so a blob
+        // moving fast reads as visibly elongated (classic animation liveliness) while a
+        // near-stationary one (e.g. right at a rise/sink flip) looks closer to round.
+        float speedFactor = Clamp(fabsf(blob.vy) * 0.030f, 0.0f, 0.28f);
+        float stretch = (blob.vy >= 0.0f) ? (1.0f - speedFactor) : (1.0f + speedFactor);
+
+        // Low-frequency angular wobble on top of the isotropic falloff -- deforms the
+        // silhouette into an organic, non-circular "amoeba" outline that slowly churns
+        // over time, instead of every blob rendering as a plain soft-edged circle.
+        // Kept to 2-3 lobes and modest amplitude: at this display's physical pixel pitch,
+        // anything higher-frequency or stronger reads as noise rather than a blobby shape.
+        float angle = atan2f(dy * stretch, dx);
+        float wobble = 1.0f
+            + 0.16f * sinf(angle * 2.0f + blob.phase + timeSeconds * 0.5f)
+            + 0.10f * sinf(angle * 3.0f - blob.phase * 1.6f + timeSeconds * 0.7f);
+        float distSq = (dx * dx + (dy * stretch) * (dy * stretch)) / (wobble * wobble) + radius * 0.85f;
         float blobField = (radius * radius) / distSq;
         field += blobField;
 
