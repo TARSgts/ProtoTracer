@@ -101,7 +101,8 @@ private:
 #else
     static constexpr uint8_t kAfterGifFaceIndex = kAfterDinoFaceIndex;
 #endif
-    static constexpr uint8_t kFaceCount = kAfterGifFaceIndex;
+    static constexpr uint8_t kHeartEyeFaceIndex = kAfterGifFaceIndex;
+    static constexpr uint8_t kFaceCount = kHeartEyeFaceIndex + 1;
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
@@ -203,6 +204,7 @@ private:
         #ifdef ENABLE_GIF_FACE
         F("GIF"),
         #endif
+        F("HEART"),
     };
 
     void LinkControlParameters() override {//Called from parent
@@ -213,6 +215,7 @@ private:
         AddParameter(NukudeFace::Frown, pM.GetMorphWeightReference(NukudeFace::Frown), 15);
         AddParameter(NukudeFace::LookUp, pM.GetMorphWeightReference(NukudeFace::LookUp), 15);
         AddParameter(NukudeFace::LookDown, pM.GetMorphWeightReference(NukudeFace::LookDown), 15);
+        AddParameter(NukudeFace::HeartEye, pM.GetMorphWeightReference(NukudeFace::HeartEye), 15, IEasyEaseAnimator::InterpolationMethod::Cosine);
 
         AddParameter(NukudeFace::HideBlush, pM.GetMorphWeightReference(NukudeFace::HideBlush), 15, IEasyEaseAnimator::InterpolationMethod::Cosine, true);
 
@@ -229,6 +232,11 @@ private:
 
     void Default(){
         ApplyMenuOrDefaultColor(Color::CWHITE);
+    }
+
+    void HeartEyes(){
+        AddParameterFrame(NukudeFace::HeartEye, 1.0f);
+        ApplyMenuOrDefaultColor(Color::CRED);
     }
 
     void Angry(){
@@ -773,6 +781,7 @@ public:
 #ifdef ENABLE_GIF_FACE
             case kGifFaceIndex: GifFace();              break;
 #endif
+            case kHeartEyeFaceIndex: HeartEyes();       break;
             default: SpectrumAnalyzerFace();        break;
         }
     }
@@ -788,6 +797,7 @@ public:
             case 2: Surprised();    break; // [B]lush
             case 4: Doubt();        break; // [D]oubt
             case 6: Frown();        break; // [F]rown
+            case 12: HeartEyes();   break; // [L]ove
             case 19: Sad();         break; // [S]ad
             case 21: LookUp();      break; // Look [U]p
             case 22: LookDown();    break; // Look [V] Down

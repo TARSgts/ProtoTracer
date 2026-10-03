@@ -34,7 +34,8 @@ public:
         Blink,
         BiggerNose,
         MoveEye,
-        HideBlush
+        HideBlush,
+        HeartEye
     };
 
 private:
@@ -44,6 +45,26 @@ private:
 	TriangleGroup<54,44> triangleGroupMemory = TriangleGroup<54,44>(&triangleGroup);
 	SimpleMaterial simpleMaterial = SimpleMaterial(RGBColor(128, 128, 128));
 	Object3D basisObj = Object3D(&triangleGroup, &triangleGroupMemory, &simpleMaterial);
+
+    // Keep imported morph IDs/data intact; the custom eye blends after them.
+    float heartEyeWeight = 0.0f;
+    const Vector3D heartEyeVertices[15] = {
+        Vector3D(1.0000f,187.0000f,79.6662f),
+        Vector3D(33.0000f,163.0000f,70.3053f),
+        Vector3D(13.0000f,126.0000f,91.8889f),
+        Vector3D(41.0000f,189.0000f,58.2831f),
+        Vector3D(-27.0000f,177.0000f,97.2364f),
+        Vector3D(-15.0000f,189.0000f,87.3723f),
+        Vector3D(17.0000f,161.0000f,79.2216f),
+        Vector3D(-7.0000f,162.0000f,91.3858f),
+        Vector3D(52.0000f,164.0000f,60.1332f),
+        Vector3D(-9.0000f,143.0000f,98.1733f),
+        Vector3D(25.0000f,187.0000f,67.1994f),
+        Vector3D(-26.0000f,164.0000f,100.6502f),
+        Vector3D(13.0000f,174.0000f,77.3661f),
+        Vector3D(35.0000f,143.0000f,75.3175f),
+        Vector3D(53.0000f,177.0000f,55.6804f)
+    };
 
     static const byte morphCount = 26;
     int FrownIndexes[4] = {16,17,18,19};
@@ -137,14 +158,16 @@ public:
     }
 
     void SetMorphWeight(Morphs morph, float weight){
-        morphs[morph].Weight = weight;
+        if (morph == HeartEye) heartEyeWeight = weight;
+        else morphs[morph].Weight = weight;
     }
 
     float* GetMorphWeightReference(Morphs morph){
-        return &morphs[morph].Weight;
+        return morph == HeartEye ? &heartEyeWeight : &morphs[morph].Weight;
     }
 
     void Reset(){
+        heartEyeWeight = 0.0f;
         for(int i = 0; i < morphCount; i++){
             morphs[i].Weight = 0.0f;
         }
@@ -156,6 +179,20 @@ public:
         for(int i = 0; i < morphCount; i++){
             if(morphs[i].Weight > 0.0f){
                 morphs[i].MorphObject3D(basisObj.GetTriangleGroup());
+            }
+        }
+
+        const float heartWeight = Mathematics::Constrain(heartEyeWeight, 0.0f, 1.0f);
+        if (heartWeight > 0.0f) {
+            const float blink = Mathematics::Constrain(morphs[Blink].Weight, 0.0f, 1.0f);
+            Vector3D* vertices = basisObj.GetTriangleGroup()->GetVertices();
+            for (uint8_t i = 0; i < 15; ++i) {
+                Vector3D heart = heartEyeVertices[i];
+                // Close along the eye's plane to a thin lid, retaining valid triangles.
+                const float closure = (heart.Y - 156.0f) * blink * 0.95f;
+                heart.Y -= closure;
+                heart.Z += closure * 0.3025589f;
+                vertices[i + 1] = vertices[i + 1] * (1.0f - heartWeight) + heart * heartWeight;
             }
         }
 
