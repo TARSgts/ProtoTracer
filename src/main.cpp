@@ -73,7 +73,7 @@ void loop() {
     // Identify this upload once a USB serial monitor connects.
     static bool audioBuildInfoSent = false;
     if (!audioBuildInfoSent && Serial) {
-        Serial.println(F("ProtoTracer A30 IR blue-channel fix R9 | resored 16c0d1c | Teensy 4.0 | SmartLED Shield V5"));
+        Serial.println(F("ProtoTracer A30 balanced audio orb R13 | main d2e30ff | Teensy 4.0 | SmartLED Shield V5"));
         audioBuildInfoSent = true;
     }
     #ifdef PROJECT_PROTOGEN_HUB75

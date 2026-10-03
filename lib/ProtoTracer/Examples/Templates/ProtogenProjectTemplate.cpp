@@ -743,7 +743,9 @@ void ProtogenProject::SpectrumAnalyzerFace(){
 }
 
 void ProtogenProject::AudioReactiveGradientFace(){
-    aRG.Update(MicrophoneFourier::GetFourierFiltered());
+    // Use the fast visualizer capture without changing the legacy mouth input.
+    MicrophoneFourier::RequestSpectrum();
+    aRG.Update(MicrophoneFourier::GetSpectrum());
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
     eEA.AddParameterFrame(offsetFaceIndARG, 1.0f);

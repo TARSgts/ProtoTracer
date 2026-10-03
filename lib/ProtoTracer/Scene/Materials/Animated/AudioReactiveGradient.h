@@ -27,14 +27,17 @@
  */
 class AudioReactiveGradient : public Material {
 private:
-    BouncePhysics* bPhy[128]; ///< Array of BouncePhysics instances for handling dynamic bouncing.
+    BouncePhysics* bPhy[128] = {}; ///< Bounce objects used by the noncircular gradient.
     Vector2D size; ///< The size of the gradient area.
     Vector2D offset; ///< The offset of the gradient from the origin.
     float angle = 0.0f; ///< Rotation angle of the gradient.
     float hueAngle = 0.0f; ///< Hue angle for color adjustments.
     float radius = 0.0f; ///< Radius for circular gradient patterns.
-    float* data; ///< Pointer to the audio data array.
-    float bounceData[128]; ///< Processed bounce data for audio reactivity.
+    float* data = nullptr; ///< Pointer to the audio data array.
+    float bounceData[128] = {}; ///< Processed data for audio reactivity.
+    static constexpr uint8_t SpokeCount = 32;
+    float spokeData[SpokeCount] = {}; ///< Peak of each four-bin frequency spoke.
+    uint32_t lastUpdateMillis = 0; ///< Clock for the circular envelope's release.
     uint8_t bins = 128; ///< Number of bins for audio data processing.
     bool bounce = false; ///< Flag indicating if bouncing effects are enabled.
     bool circular = false; ///< Flag indicating if circular patterns are enabled.
