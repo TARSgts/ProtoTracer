@@ -34,7 +34,7 @@ void HUB75Controller::Display(){
     matrix.setBrightness(brightness);
     apamatrix.setBrightness(accentBrightness);
 
-    if (externalFrameProvider) {
+    if (externalFrameProvider && !startupIndices) {
         return;
     }
 
@@ -52,6 +52,13 @@ void HUB75Controller::Display(){
             uint16_t pixelNum = y * 64 + x;
 
             rgb24 rgbColor = rgb24((uint16_t)camPixels->GetColor(pixelNum)->R, (uint16_t)camPixels->GetColor(pixelNum)->G, (uint16_t)camPixels->GetColor(pixelNum)->B);
+
+            if (startupIndices) {
+                // Video rows are top-down; camera rows are bottom-up. Retain the
+                // normal second-panel mirror and the shared ISR swap guard.
+                const uint16_t paletteOffset = startupIndices[(31 - y) * 64 + x] * 3;
+                rgbColor = rgb24(startupPalette[paletteOffset], startupPalette[paletteOffset + 1], startupPalette[paletteOffset + 2]);
+            }
 
             backgroundLayer.drawPixel(x, (31 - y), rgbColor);
             backgroundLayer.drawPixel(63 - x, (31 - y) + 32, rgbColor);
@@ -96,6 +103,11 @@ void HUB75Controller::SetExternalFrameProvider(bool enabled){
 
 bool HUB75Controller::IsExternalFrameProvider() const{
     return externalFrameProvider;
+}
+
+void HUB75Controller::SetStartupFrame(const uint8_t* indices, const uint8_t* rgbPalette) {
+    startupIndices = (indices && rgbPalette) ? indices : nullptr;
+    startupPalette = startupIndices ? rgbPalette : nullptr;
 }
 
 void HUB75Controller::PrintDisplayStats() {

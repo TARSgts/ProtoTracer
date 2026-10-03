@@ -12,6 +12,10 @@
 
 #pragma once
 
+// Play the embedded four-second startup video once after HUB75 initialization.
+// Comment this out to boot directly into the saved face; no SD card is required.
+#define ENABLE_STARTUP_ANIMATION
+
 /**
  * @def HUB75_RBG
  * @brief Define this macro to use a modified Matrix Hardware file for panels with RBG color order.

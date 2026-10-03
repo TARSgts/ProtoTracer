@@ -17,6 +17,9 @@
 
 #include "../../Camera/CameraManager/Implementations/HUB75DeltaCameras.h"
 #include "../../Controller/HUB75Controller.h"
+#ifdef ENABLE_STARTUP_ANIMATION
+#include "../../ExternalDevices/Displays/StartupAnimation.h"
+#endif
 #ifdef ENABLE_GIF_FACE
 #include "../../ExternalDevices/Displays/SmartMatrixGifPlayer.h"
 #endif
@@ -106,6 +109,9 @@ private:
     static constexpr bool kUseDvdDebugCube = false; ///< Set true to render the simple cube for troubleshooting geometry issues.
     HUB75DeltaCameraManager cameras;
     HUB75Controller controller = HUB75Controller(&cameras, 50, 50);
+#ifdef ENABLE_STARTUP_ANIMATION
+    StartupAnimation startupAnimation;
+#endif
     NukudeFace pM;
     DeltaDisplayBackground deltaDisplayBackground;
     DVD dvdMesh; // DVD logo mesh that carries the bouncing transform
@@ -718,7 +724,29 @@ public:
             }
         }
 #endif
+#ifdef ENABLE_STARTUP_ANIMATION
+        // Keep normal menu, microphone and face updates running underneath the
+        // startup frame. Completion simply releases the display to that face.
+        const bool startupPlaying = startupAnimation.Update(millis());
+        controller.SetStartupFrame(startupPlaying ? startupAnimation.GetFrame() : nullptr,
+                                   startupPlaying ? StartupClip::kPalette : nullptr);
+#endif
     }
+
+#ifdef ENABLE_STARTUP_ANIMATION
+    void PrintStartupStats() const {
+        Serial.print(F("Startup animation: "));
+        Serial.print(startupAnimation.HasFailed() ? F("failed") :
+                     startupAnimation.IsFinished() ? F("completed") :
+                     startupAnimation.IsStarted() ? F("playing") : F("pending"));
+        Serial.print(F(", frame: "));
+        Serial.print(startupAnimation.GetFrameIndex());
+        Serial.print(F(", decoded_frames: "));
+        Serial.print(startupAnimation.GetDecodedFrames());
+        Serial.print(F(", time_ms: "));
+        Serial.println(millis());
+    }
+#endif
 
     void SelectFace(uint8_t code) {
         ClearStripColorOverride();

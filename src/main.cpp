@@ -73,7 +73,7 @@ void loop() {
     // Identify this upload once a USB serial monitor connects.
     static bool audioBuildInfoSent = false;
     if (!audioBuildInfoSent && Serial) {
-        Serial.println(F("ProtoTracer A30 heart eyes R17 | main f82d85d | Teensy 4.0 | SmartLED Shield V5"));
+        Serial.println(F("ProtoTracer A30 fitted startup R20 | main 7ae8acf | Teensy 4.0 | SmartLED Shield V5"));
         audioBuildInfoSent = true;
     }
     #ifdef PROJECT_PROTOGEN_HUB75
@@ -90,6 +90,9 @@ void loop() {
         Serial.print(F(", time_ms: "));
         Serial.println(now);
         HUB75Controller::PrintDisplayStats();
+        #ifdef ENABLE_STARTUP_ANIMATION
+        project.PrintStartupStats();
+        #endif
     }
     #endif
     #ifndef PROJECT_VERIFY_HARDWARE

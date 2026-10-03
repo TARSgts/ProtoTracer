@@ -72,9 +72,14 @@ public:
      */
     bool IsExternalFrameProvider() const;
 
+    // Optional top-down 64x32 indexed startup frame. Null restores camera output.
+    void SetStartupFrame(const uint8_t* indices, const uint8_t* rgbPalette);
+
     // USB diagnostics; flag counts represent reporting windows, not individual events.
     static void PrintDisplayStats();
 
 private:
     bool externalFrameProvider = false;
+    const uint8_t* startupIndices = nullptr;
+    const uint8_t* startupPalette = nullptr;
 };
