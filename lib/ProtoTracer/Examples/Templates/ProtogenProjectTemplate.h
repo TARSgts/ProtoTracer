@@ -183,7 +183,7 @@ private:
     /**
      * @brief Audio-reactive materials.
      */
-    SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), true, true); 
+    SpectrumAnalyzer sA = SpectrumAnalyzer(Vector2D(200, 100), Vector2D(100, 50), false, true);
     AudioReactiveGradient aRG = AudioReactiveGradient(Vector2D(160, 160), Vector2D(0, 0), true, true); 
     Oscilloscope oSC = Oscilloscope(Vector2D(200, 100), Vector2D(0, 0));
 #ifdef ENABLE_FRACTAL_FACE

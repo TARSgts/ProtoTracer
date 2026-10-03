@@ -24,13 +24,13 @@
  */
 class SpectrumAnalyzer : public Material {
 private:
-    BouncePhysics* bPhy[128]; ///< Array of bounce physics objects for each frequency bin.
+    BouncePhysics* bPhy[128] = {}; ///< Array of bounce physics objects for each frequency bin.
     Vector2D size; ///< Size of the visualization area.
     Vector2D offset; ///< Offset position of the visualization area.
     float angle = 0.0f; ///< Rotation angle of the visualization.
     float hueAngle = 0.0f; ///< Hue adjustment angle for the spectrum colors.
-    float* data; ///< Pointer to the input audio data.
-    float bounceData[128]; ///< Processed bounce data for visualization.
+    float* data = nullptr; ///< Pointer to the input audio data.
+    float bounceData[128] = {}; ///< Processed bounce data for visualization.
     float processedData[128] = {0.0f}; ///< Locally processed spectrum values.
     float smoothedData[128] = {0.0f}; ///< Smoothed magnitudes for stability.
     float peakHoldData[128] = {0.0f}; ///< Peak hold values to keep spikes visible.

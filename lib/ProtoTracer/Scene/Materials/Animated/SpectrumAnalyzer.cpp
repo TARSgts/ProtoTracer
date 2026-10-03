@@ -1,6 +1,7 @@
 #include "SpectrumAnalyzer.h"
 #include <algorithm>
 #include <cmath>
+#include "../../../ExternalDevices/Sensors/Microphone/Utils/AudioFrame.h"
 
 SpectrumAnalyzer::SpectrumAnalyzer(Vector2D size, Vector2D offset, bool bounce, bool flipY, bool mirrorY) {
     this->size = size.Divide(2.0f);
@@ -89,8 +90,8 @@ void SpectrumAnalyzer::Update(float* readData) {
 
     constexpr float emphasisSlope = 0.22f;
     constexpr float lowBinBoost = 1.18f;
-    constexpr float riseCoeff = 0.58f;
-    constexpr float fallCoeff = 0.18f;
+    constexpr float riseCoeff = 1.0f;
+    constexpr float fallCoeff = 0.60f;
     constexpr float peakFall = 0.90f;
     constexpr uint8_t peakHoldFrames = 14;
     constexpr float holdTolerance = 0.008f;
@@ -112,15 +113,13 @@ void SpectrumAnalyzer::Update(float* readData) {
         } else {
             value = Mathematics::Constrain(readData[i], 0.0f, 1.0f);
         }
-        value = Mathematics::Constrain(value, 0.0f, 1.2f);
+        value = AudioFrame::Unit(value);
         float emphasis = 0.85f + (float(i) / float(bins - 1)) * emphasisSlope;
         if (i < 6) emphasis *= lowBinBoost;
         value = Mathematics::Constrain(value * emphasis, 0.0f, 1.2f);
         noiseAccumulator += value;
 
-        float previous = smoothedData[i];
-        float coeff = (value > previous) ? riseCoeff : fallCoeff;
-        float smooth = previous + (value - previous) * coeff;
+        float smooth = AudioFrame::Follow(smoothedData[i], value, riseCoeff, fallCoeff);
         smoothedData[i] = smooth;
 
         if (smooth + holdTolerance >= peakHoldData[i]) {
@@ -156,7 +155,8 @@ void SpectrumAnalyzer::Update(float* readData) {
 
     if (peak > 0.005f) {
         float desiredGain = peakTarget / peak;
-        desiredGain = Mathematics::Constrain(desiredGain, 0.6f, 2.2f);
+        // Reduce overloaded input; do not expand quiet audio toward full height.
+        desiredGain = Mathematics::Constrain(desiredGain, 0.6f, 1.0f);
         float response = desiredGain > autoGain ? 0.20f : 0.08f;
         autoGain += (desiredGain - autoGain) * response;
     } else {
@@ -234,7 +234,7 @@ RGBColor SpectrumAnalyzer::GetRGB(const Vector3D& position, const Vector3D& norm
     if (mapped > maxIndex) mapped = maxIndex;
 
     float height = SampleFrequency(mapped);
-    height = Mathematics::Constrain(height * 2.8f, 0.0f, 1.0f);
+    height = AudioFrame::Unit(height);
     float yColor;
 
     if (mirrorY) {

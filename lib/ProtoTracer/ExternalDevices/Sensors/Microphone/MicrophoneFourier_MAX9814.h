@@ -19,6 +19,7 @@
 #include "../../../Utils/Filter/FFTFilter.h" // Include for FFT filtering.
 #include "../../../Utils/Time/TimeStep.h" // Include for time management.
 #include "Utils/MicrophoneFourierBase.h" // Include the base class for microphone FFT processing.
+#include "Utils/AudioProcessingMode.h"
 
 /**
  * @class MicrophoneFourier
@@ -33,10 +34,15 @@ private:
     static IntervalTimer sampleTimer; ///< Timer for managing sampling intervals.
     static TimeStep timeStep; ///< Time step utility for controlling updates.
 
-    static uint16_t samples; ///< Number of samples collected in the current cycle.
-    static uint16_t samplesStorage; ///< Total number of samples stored.
+    static volatile uint16_t samples; ///< Number of samples collected in the current cycle.
+    static volatile uint16_t samplesStorage; ///< Total number of samples stored.
+    static constexpr uint16_t AnalysisSamples = FFTSize / 2; ///< 42.7 ms at 12 kS/s.
+    static float analysisWindow[AnalysisSamples];
+    static uint32_t analysisCount; ///< Foreground analyses, for USB timing verification.
+    static AudioProcessingMode processingMode;
+    static float spectrumData[OutputBins];
     static float refreshRate; ///< Refresh rate for processing in Hz.
-    static bool samplesReady; ///< Flag indicating if samples are ready for processing.
+    static volatile bool samplesReady; ///< Flag indicating if samples are ready for processing.
 
     static uint16_t frequencyBins[OutputBins]; ///< Array for storing frequency bin data.
 
@@ -51,8 +57,18 @@ private:
      * @brief Starts the sampling process using the IntervalTimer.
      */
     static void StartSampler();
+    static void UpdateSpectrum();
+    static void UpdateLegacy();
 
 public:
+    static uint32_t GetAnalysisCount() { return analysisCount; }
+    static uint16_t GetAnalysisSampleCount() { return processingMode.SampleCount(FFTSize); }
+    static bool IsSpectrumMode() { return processingMode.IsSpectrum(); }
+    static float* GetSpectrum() { return spectrumData; }
+    static void BeginFrame() { processingMode.BeginFrame(); }
+    static void RequestSpectrum() { processingMode.RequestSpectrum(); }
+    static void EndFrame();
+
     /**
      * @brief Initializes the microphone and FFT system.
      *

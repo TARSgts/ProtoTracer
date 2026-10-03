@@ -729,7 +729,9 @@ void ProtogenProject::AddBackgroundMaterialFrame(Material& material, float opaci
 
 void ProtogenProject::SpectrumAnalyzerFace(){
     // Spectrum analyzer expects FFT magnitudes; waveform input makes bars sluggish/incorrect.
-    sA.Update(MicrophoneFourier::GetFourierFiltered());
+    // Fast spectrum is independent of the original mouth/orb audio path.
+    MicrophoneFourier::RequestSpectrum();
+    sA.Update(MicrophoneFourier::GetSpectrum());
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
     eEA.AddParameterFrame(offsetFaceIndSA, 1.0f);
@@ -984,7 +986,7 @@ ProtogenProject::ProtogenProject(CameraManager* cameras, Controller* controller,
     sA.SetSmoothingRadius(0);
     sA.EnableColumnInterpolation(false);
     sA.EnableFrequencyRemap(false);
-    sA.EnablePeakHoldBlend(true, 0.18f);
+    sA.EnablePeakHoldBlend(false);
 
     oSC.SetSize(analyzerSize);
     oSC.SetPosition(analyzerPosition);

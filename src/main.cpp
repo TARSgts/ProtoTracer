@@ -70,10 +70,38 @@ void setup() {
  * If PROJECT_VERIFY_HARDWARE is defined, this function is disabled.
  */
 void loop() {
+    // Identify this upload once a USB serial monitor connects.
+    static bool audioBuildInfoSent = false;
+    if (!audioBuildInfoSent && Serial) {
+        Serial.println(F("ProtoTracer A30 IR blue-channel fix R9 | resored 16c0d1c | Teensy 4.0 | SmartLED Shield V5"));
+        audioBuildInfoSent = true;
+    }
+    #ifdef PROJECT_PROTOGEN_HUB75
+    static uint32_t audioStatsMillis = 0;
+    uint32_t now = millis();
+    if (Serial && now - audioStatsMillis >= 1000) {
+        audioStatsMillis = now;
+        Serial.print(F("Audio analyses: "));
+        Serial.print(MicrophoneFourier::GetAnalysisCount());
+        Serial.print(F(", samples/window: "));
+        Serial.print(MicrophoneFourier::GetAnalysisSampleCount());
+        Serial.print(F(", mode: "));
+        Serial.print(MicrophoneFourier::IsSpectrumMode() ? F("spectrum") : F("original"));
+        Serial.print(F(", time_ms: "));
+        Serial.println(now);
+        HUB75Controller::PrintDisplayStats();
+    }
+    #endif
     #ifndef PROJECT_VERIFY_HARDWARE
     float ratio = (float)(millis() % 5000) / 5000.0f; ///< Calculates animation ratio based on time.
 
+    #ifdef PROJECT_PROTOGEN_HUB75
+    MicrophoneFourier::BeginFrame();
+    #endif
     project.Animate(ratio); ///< Animates the project based on the current ratio.
+    #ifdef PROJECT_PROTOGEN_HUB75
+    MicrophoneFourier::EndFrame();
+    #endif
     project.Render(); ///< Renders the project's scene.
     project.Display(); ///< Displays the rendered frame.
     project.PrintStats(); ///< Outputs debugging and performance statistics.

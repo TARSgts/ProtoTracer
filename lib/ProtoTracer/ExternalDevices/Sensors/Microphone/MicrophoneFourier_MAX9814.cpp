@@ -1,17 +1,23 @@
 #include "MicrophoneFourier_MAX9814.h"
+#include "Utils/AudioFrame.h"
 
 IntervalTimer MicrophoneFourier::sampleTimer;
 TimeStep MicrophoneFourier::timeStep = TimeStep(60);
 
 uint16_t MicrophoneFourier::frequencyBins[];
+float MicrophoneFourier::analysisWindow[AnalysisSamples];
+uint32_t MicrophoneFourier::analysisCount = 0;
+AudioProcessingMode MicrophoneFourier::processingMode;
+float MicrophoneFourier::spectrumData[OutputBins] = {};
 
-uint16_t MicrophoneFourier::samples = 0;
-uint16_t MicrophoneFourier::samplesStorage = 0;
+volatile uint16_t MicrophoneFourier::samples = 0;
+volatile uint16_t MicrophoneFourier::samplesStorage = 0;
 float MicrophoneFourier::refreshRate = 60.0f;
-bool MicrophoneFourier::samplesReady = false;
+volatile bool MicrophoneFourier::samplesReady = false;
 
 
 void MicrophoneFourier::SamplerCallback() {
+    if (samplesReady || samplesStorage >= GetAnalysisSampleCount()) return;
     int inputSample = analogRead(pin);
 
     inputSamp[samples++] = (float)inputSample;
@@ -19,7 +25,7 @@ void MicrophoneFourier::SamplerCallback() {
 
     inputStorage[samplesStorage++] = inputSample;
 
-    if (samples >= FFTSize * 2) {
+    if (samplesStorage >= GetAnalysisSampleCount()) {
         sampleTimer.end();
         samplesReady = true;
     }
@@ -29,7 +35,8 @@ void MicrophoneFourier::StartSampler() {
     samplesReady = false;
     samples = 0;
     samplesStorage = 0;
-    sampleTimer.begin(SamplerCallback, 1000000 / sampleRate);
+    sampleTimer.begin(SamplerCallback, processingMode.IsSpectrum() ?
+                      1000000.0f / sampleRate : float(1000000 / sampleRate));
 }
 
 void MicrophoneFourier::Initialize(uint8_t pin, uint16_t sampleRate, float minDB, float maxDB, float refreshRate) {
@@ -73,6 +80,9 @@ void MicrophoneFourier::Initialize(uint8_t pin, uint16_t sampleRate, float minDB
         frequencyBins[i] = fftBin;
     }
 
+    processingMode = AudioProcessingMode();
+    analysisCount = 0;
+    AudioFrame::BuildWindow(analysisWindow, AnalysisSamples);
     StartSampler();
     isInitialized = true;
 }
@@ -83,10 +93,73 @@ void MicrophoneFourier::Reset() {
     }
 }
 
-void MicrophoneFourier::Update() {
-    // Process only when both the refresh interval elapsed and a full FFT window is ready.
-    if (!samplesReady || !timeStep.IsReady()) return;
+void MicrophoneFourier::EndFrame() {
+    if (!processingMode.HasChange()) return;
+    sampleTimer.end();
+    processingMode.Commit();
+    Reset();
+    StartSampler();
+}
 
+void MicrophoneFourier::Update() {
+    if (!isInitialized || !samplesReady || !timeStep.IsReady()) return;
+    if (processingMode.IsSpectrum()) UpdateSpectrum();
+    else UpdateLegacy();
+    ++analysisCount;
+    Reset();
+    StartSampler();
+}
+
+void MicrophoneFourier::UpdateSpectrum() {
+    // Preserve resored waveform/log-band features; remove bias and window the FFT.
+    AudioFrame::PrepareSpectrum(inputStorage, inputSamp, AnalysisSamples,
+                                           FFTSize, analysisWindow);
+
+    fft.Radix2FFT(inputSamp);
+    fft.ComplexMagnitude(inputSamp, outputMagn);
+
+
+    constexpr uint16_t kMaxFftBin = (FFTSize / 2) - 1;
+    // Keep the old 500-900Hz hiss gate available for quick A/B testing.
+    constexpr bool kEnableMidBandNoiseGate = false;
+    constexpr float kMidBandMinHz = 500.0f;
+    constexpr float kMidBandMaxHz = 900.0f;
+    constexpr float kMidBandGate = 0.10f;
+    constexpr float kMidBandLowLevelAttenuation = 0.28f;
+
+    for (uint8_t i = 0; i < OutputBins; i++) {
+        uint16_t binL = frequencyBins[i];
+        uint16_t binH = (i + 1 < OutputBins)
+                            ? static_cast<uint16_t>(frequencyBins[i + 1] > 0 ? frequencyBins[i + 1] - 1 : 0)
+                            : kMaxFftBin;
+
+        if (binL < 1) binL = 1;
+        if (binL > kMaxFftBin) binL = kMaxFftBin;
+        if (binH < 1) binH = 1;
+        if (binH > kMaxFftBin) binH = kMaxFftBin;
+        if (binH < binL) binH = binL;
+
+        float magnitude = AudioFrame::BandRange(outputMagn, FFTSize, binL, binH);
+        float intensity = AudioFrame::Intensity(magnitude, minDB, maxDB);
+
+        if (kEnableMidBandNoiseGate) {
+            // Optional suppression for weak random hiss in the 500-900Hz band.
+            float centerHz = ((float(binL) + float(binH)) * 0.5f) * (float(sampleRate) / float(FFTSize));
+            if (centerHz >= kMidBandMinHz && centerHz <= kMidBandMaxHz) {
+                if (intensity <= kMidBandGate) {
+                    intensity *= kMidBandLowLevelAttenuation;
+                } else {
+                    intensity = (intensity - kMidBandGate) / (1.0f - kMidBandGate);
+                }
+            }
+        }
+
+        spectrumData[i] = intensity;
+    }
+
+}
+
+void MicrophoneFourier::UpdateLegacy() {
     GenerateWaveform(samplesStorage);
 
     fft.Radix2FFT(inputSamp);
@@ -145,6 +218,4 @@ void MicrophoneFourier::Update() {
     threshold = powf(averageMagnitude, 2.0f);
     threshold = threshold > 0.2f ? (threshold * 5.0f > 1.0f ? 1.0f : threshold * 5.0f) : 0.0f;
 
-    Reset();
-    StartSampler();
 }

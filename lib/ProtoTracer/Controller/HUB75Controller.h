@@ -72,6 +72,9 @@ public:
      */
     bool IsExternalFrameProvider() const;
 
+    // USB diagnostics; flag counts represent reporting windows, not individual events.
+    static void PrintDisplayStats();
+
 private:
     bool externalFrameProvider = false;
 };

@@ -2,6 +2,11 @@
 
 #if defined(ENABLE_IR_REMOTE) && !defined(NEOTRELLISMENU) && !defined(MORSEBUTTON)
 
+// Even DISABLE_LED_FEEDBACK configures LED_BUILTIN in IRremote::begin().
+// Teensy pin 13 is HUB75 lower-half blue; leave its display pin mux untouched.
+#ifndef NO_LED_FEEDBACK_CODE
+#define NO_LED_FEEDBACK_CODE
+#endif
 #include <IRremote.hpp>
 
 IRRemoteReceiver::Mapping IRRemoteReceiver::mappings[IRRemoteReceiver::kMaxMappings];
