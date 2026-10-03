@@ -58,23 +58,17 @@ void AudioReactiveGradient::Update(float* readData) {
     data = readData;
 
     if (circular) {
-        const uint32_t now = millis();
-        const uint32_t elapsed = now - lastUpdateMillis;
-        lastUpdateMillis = now;
-        // Immediate attack, 80 ms release; no ten-frame average or bounce overshoot.
-        const float decay = expf(-float(elapsed) / 80.0f);
+        // The active template supplies the accepted spectrum analyzer's processed
+        // data. Do not add another bounce, temporal filter or whole-circle pulse.
         for (uint8_t i = 0; i < bins; ++i) {
-            const float target = data ? AudioFrame::Unit(data[i]) : 0.0f;
-            bounceData[i] = bounce && target < bounceData[i]
-                                ? target + (bounceData[i] - target) * decay
-                                : target;
+            bounceData[i] = data ? AudioFrame::Unit(data[i]) : 0.0f;
         }
-        for (uint8_t spoke = 0; spoke < SpokeCount; ++spoke) {
+        for (uint8_t bar = 0; bar < BarCount; ++bar) {
             float peak = 0.0f;
-            for (uint8_t bin = 0; bin < bins / SpokeCount; ++bin) {
-                peak = Mathematics::Max(peak, bounceData[spoke * (bins / SpokeCount) + bin]);
+            for (uint8_t bin = 0; bin < bins / BarCount; ++bin) {
+                peak = Mathematics::Max(peak, bounceData[bar * (bins / BarCount) + bin]);
             }
-            spokeData[spoke] = sqrtf(peak);
+            barData[bar] = peak;
         }
         return;
     }
@@ -101,31 +95,21 @@ RGBColor AudioReactiveGradient::GetRGB(const Vector3D& position, const Vector3D&
         const float diskRadius = Mathematics::Min(size.X, size.Y);
         if (distance > diskRadius) return RGBColor();
 
-        // One turn covers all bins. Wrap the last interpolation pair at the seam.
-        float mapped = (0.5f - atan2f(rPos.Y, rPos.X) / (2.0f * Mathematics::MPI)) * float(bins);
-        if (mapped >= float(bins)) mapped = 0.0f;
-        const uint8_t left = static_cast<uint8_t>(mapped);
-        const uint8_t right = (left + 1) % bins;
-        const float body = sqrtf(AudioFrame::Unit(Mathematics::CosineInterpolation(
-            bounceData[left], bounceData[right], mapped - float(left))));
-        const float spokeMapped = mapped * float(SpokeCount) / float(bins);
-        const uint8_t spoke = static_cast<uint8_t>(spokeMapped);
-        const float tip = 1.0f - fabsf(2.0f * (spokeMapped - float(spoke)) - 1.0f);
-        // A continuous body joins 32 tapered frequency spikes. Pool four bins
-        // per spoke so narrow spectral peaks remain visible on the small panel.
-        const float height = AudioFrame::Unit(body * 0.60f + spokeData[spoke] * tip * 0.40f);
-
-        // Scale the audio movement to this canvas. The old height*150 swallowed
-        // the entire disk at ordinary levels on the template's 50-90 unit canvas.
-        const float baseCenter = Mathematics::Constrain(radius - 5.0f, diskRadius * 0.25f, diskRadius * 0.75f);
-        // Let the radius pulse too; width alone changed by less than a pixel on
-        // moderate beats. The square-root curve makes quiet beats visible.
-        const float center = baseCenter * (0.40f + 0.60f * height);
-        const float maxThickness = Mathematics::Min(center * 0.70f, diskRadius * 0.95f - center);
-        if (fabsf(distance - center) >= height * maxThickness) return RGBColor();
-
-        const float yColor = 1.0f - distance / size.Y;
-        return material->GetRGB(Vector3D(1.0f - height - yColor, 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
+        // Bend the spectrum's horizontal bins around a fixed inner circle.
+        // Flat-topped, separate radial bars follow their own frequency levels.
+        float mapped = (0.5f - atan2f(rPos.Y, rPos.X) / (2.0f * Mathematics::MPI)) * float(BarCount);
+        if (mapped >= float(BarCount)) mapped = 0.0f;
+        const uint8_t bar = static_cast<uint8_t>(mapped);
+        const float fraction = mapped - float(bar);
+        const float inner = Mathematics::Constrain(radius * 0.50f, diskRadius * 0.32f, diskRadius * 0.46f);
+        const float rimHalfWidth = diskRadius * 0.025f;
+        if (distance < inner - rimHalfWidth) return RGBColor();
+        if (distance > inner + rimHalfWidth) {
+            if (fraction < 0.075f || fraction > 0.925f) return RGBColor();
+            const float outer = inner + barData[bar] * (diskRadius * 0.93f - inner);
+            if (distance > outer) return RGBColor();
+        }
+        return material->GetRGB(Vector3D(mapped / float(BarCount), 0, 0), Vector3D(), Vector3D()).HueShift(hueAngle);
     }
 
     // Convert to polar coordinates

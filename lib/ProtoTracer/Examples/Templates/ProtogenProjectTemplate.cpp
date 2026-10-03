@@ -381,10 +381,12 @@ void ProtogenProject::UpdateFace(float ratio) {
     sA.SetMirrorYState(Menu::MirrorSpectrumAnalyzer());
     sA.SetFlipYState(!Menu::MirrorSpectrumAnalyzer());
     
-    aRG.SetRadius((xOffset + 2.0f) * 2.0f + 25.0f);
-    aRG.SetSize(Vector2D((xOffset + 2.0f) * 10.0f + 50.0f, (xOffset + 2.0f) * 10.0f + 50.0f));
+    // A fixed canvas leaves room for bass pulses without timer-driven wobble or clipping.
+    const float orbSize = Mathematics::Min(cameraSize.X, cameraSize.Y) * 0.875f;
+    aRG.SetRadius(orbSize * 0.35f);
+    aRG.SetSize(Vector2D(orbSize, orbSize));
     aRG.SetHueAngle(ratio * 360.0f * 8.0f);
-    aRG.SetRotation(ratio * 360.0f * 2.0f);
+    aRG.SetRotation(0.0f);
 
     oSC.SetHueAngle(ratio * 360.0f * 8.0f);
 #ifdef ENABLE_FRACTAL_FACE
@@ -423,7 +425,7 @@ void ProtogenProject::UpdateFace(float ratio) {
 
     float xMaxCamera = cameraSize.X - faceSizeMaxX + faceSizeOffset;
     
-    aRG.SetPosition(Vector2D(xMaxCamera / 2.0f + xOffset * 4.0f, cameraSize.Y / 2.0f + yOffset * 4.0f));
+    aRG.SetPosition(Vector2D(xMaxCamera / 2.0f, cameraSize.Y / 2.0f));
 
     objA.SetCameraMax(Vector2D(xMaxCamera, cameraSize.Y - cameraSize.Y * offsetFace).Multiply(scale));
 
@@ -745,7 +747,8 @@ void ProtogenProject::SpectrumAnalyzerFace(){
 void ProtogenProject::AudioReactiveGradientFace(){
     // Use the fast visualizer capture without changing the legacy mouth input.
     MicrophoneFourier::RequestSpectrum();
-    aRG.Update(MicrophoneFourier::GetSpectrum());
+    sA.Update(MicrophoneFourier::GetSpectrum());
+    aRG.Update(sA.GetFourierData());
 
     eEA.AddParameterFrame(offsetFaceInd, 1.0f);
     eEA.AddParameterFrame(offsetFaceIndARG, 1.0f);
